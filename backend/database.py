@@ -1,20 +1,19 @@
 """
 Database configuration and session management
 """
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
-from contextlib import contextmanager
+
 import os
+from contextlib import contextmanager
+
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 load_dotenv()
 
 # Database URL from environment variable
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/rule1_investing"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/rule1_investing")
 
 # For SQLite (development/testing)
 # DATABASE_URL = "sqlite:///./rule1_investing.db"
@@ -40,6 +39,7 @@ else:
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def get_db() -> Session:
     """
     Dependency function to get database session.
@@ -51,12 +51,13 @@ def get_db() -> Session:
     finally:
         db.close()
 
+
 @contextmanager
 def get_db_context():
     """
     Context manager for database sessions.
     Use in scripts or non-FastAPI contexts.
-    
+
     Example:
         with get_db_context() as db:
             user = db.query(User).first()
@@ -71,14 +72,17 @@ def get_db_context():
     finally:
         db.close()
 
+
 def init_db():
     """
     Initialize database - create all tables.
     Run this once to set up the database schema.
     """
     from models import Base
+
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created successfully!")
+
 
 def drop_db():
     """
@@ -86,8 +90,10 @@ def drop_db():
     Only use in development.
     """
     from models import Base
+
     Base.metadata.drop_all(bind=engine)
     print("⚠️  All database tables dropped!")
+
 
 if __name__ == "__main__":
     # Run this file directly to initialize the database

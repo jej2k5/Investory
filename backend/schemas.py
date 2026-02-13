@@ -1,22 +1,28 @@
 """
 Pydantic schemas for request/response validation
 """
-from pydantic import BaseModel, Field, EmailStr, validator
-from typing import Optional, List
+
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr, Field, validator
 
 # ==================== USER SCHEMAS ====================
+
 
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
 
+
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
+
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserResponse(UserBase):
     id: int
@@ -27,7 +33,9 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+
 # ==================== ANALYSIS SCHEMAS ====================
+
 
 class AnalysisBase(BaseModel):
     symbol: str = Field(..., min_length=1, max_length=10)
@@ -37,10 +45,11 @@ class AnalysisBase(BaseModel):
     management_score: Optional[int] = Field(None, ge=1, le=5)
     margin_score: Optional[int] = Field(None, ge=1, le=5)
     user_notes: Optional[str] = None
-    
-    @validator('symbol')
+
+    @validator("symbol")
     def symbol_uppercase(cls, v):
         return v.upper() if v else v
+
 
 class AnalysisCreate(AnalysisBase):
     # Additional fields for creating analysis
@@ -53,12 +62,14 @@ class AnalysisCreate(AnalysisBase):
     sales_growth: Optional[float] = None
     roic: Optional[float] = None
 
+
 class AnalysisUpdate(BaseModel):
     meaning_score: Optional[int] = Field(None, ge=1, le=5)
     moat_score: Optional[int] = Field(None, ge=1, le=5)
     management_score: Optional[int] = Field(None, ge=1, le=5)
     margin_score: Optional[int] = Field(None, ge=1, le=5)
     user_notes: Optional[str] = None
+
 
 class AnalysisResponse(AnalysisBase):
     id: int
@@ -79,7 +90,9 @@ class AnalysisResponse(AnalysisBase):
     class Config:
         from_attributes = True
 
+
 # ==================== WATCHLIST SCHEMAS ====================
+
 
 class WatchlistBase(BaseModel):
     symbol: str = Field(..., min_length=1, max_length=10)
@@ -89,13 +102,15 @@ class WatchlistBase(BaseModel):
     alert_enabled: bool = False
     alert_price: Optional[float] = Field(None, gt=0)
     notes: Optional[str] = None
-    
-    @validator('symbol')
+
+    @validator("symbol")
     def symbol_uppercase(cls, v):
         return v.upper() if v else v
 
+
 class WatchlistCreate(WatchlistBase):
     pass
+
 
 class WatchlistUpdate(BaseModel):
     target_buy_price: Optional[float] = Field(None, gt=0)
@@ -103,6 +118,7 @@ class WatchlistUpdate(BaseModel):
     alert_enabled: Optional[bool] = None
     alert_price: Optional[float] = Field(None, gt=0)
     notes: Optional[str] = None
+
 
 class WatchlistResponse(WatchlistBase):
     id: int
@@ -113,7 +129,9 @@ class WatchlistResponse(WatchlistBase):
     class Config:
         from_attributes = True
 
+
 # ==================== STOCK DATA SCHEMAS ====================
+
 
 class GrowthRates(BaseModel):
     book_value: float = Field(default=0, description="10-year CAGR for book value per share")
@@ -121,6 +139,7 @@ class GrowthRates(BaseModel):
     cash_flow: float = Field(default=0, description="10-year CAGR for operating cash flow")
     sales: float = Field(default=0, description="10-year CAGR for sales per share")
     roic: float = Field(default=0, description="Return on invested capital")
+
 
 class CurrentMetrics(BaseModel):
     price: float
@@ -132,6 +151,7 @@ class CurrentMetrics(BaseModel):
     profit_margin: float
     market_cap: float
 
+
 class StockData(BaseModel):
     symbol: str
     company_name: str
@@ -141,6 +161,7 @@ class StockData(BaseModel):
     current_metrics: CurrentMetrics
     growth_rates: GrowthRates
     fetched_at: datetime
+
 
 class StockCacheResponse(BaseModel):
     symbol: str
@@ -153,12 +174,15 @@ class StockCacheResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 # ==================== VALUATION SCHEMAS ====================
+
 
 class ValuationInput(BaseModel):
     current_eps: float = Field(..., gt=0)
     growth_rate: float = Field(..., ge=0, le=100)
     pe_ratio: float = Field(..., gt=0)
+
 
 class ValuationOutput(BaseModel):
     sticker_price: float
@@ -167,7 +191,9 @@ class ValuationOutput(BaseModel):
     recommendation: str
     discount_percentage: float
 
+
 # ==================== MOAT EVALUATION SCHEMAS ====================
+
 
 class MoatEvaluation(BaseModel):
     has_wide_moat: bool
@@ -177,13 +203,16 @@ class MoatEvaluation(BaseModel):
     total_metrics: int
     assessment: str
 
+
 # ==================== STATISTICS SCHEMAS ====================
+
 
 class AnalysisStats(BaseModel):
     total_analyses: int
     average_score: float
     analyses_by_recommendation: dict
     top_symbols: List[dict]
+
 
 class UserStats(BaseModel):
     total_users: int
