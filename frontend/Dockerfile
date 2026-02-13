@@ -31,6 +31,9 @@ RUN mkdir -p /var/cache/nginx && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /etc/nginx/conf.d && \
+    # Make nginx master config compatible with non-root runtime
+    sed -i -E 's@^user\s+[^;]+;@# user directive disabled for non-root container;@' /etc/nginx/nginx.conf && \
+    sed -i -E 's@^pid\s+[^;]+;@pid /tmp/nginx.pid;@' /etc/nginx/nginx.conf && \
     # Create required directories
     mkdir -p /var/cache/nginx/client_temp \
              /var/cache/nginx/proxy_temp \
@@ -50,4 +53,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
 # Start nginx
+#CMD ["nginx", "-g", "daemon off;"]
 CMD ["nginx", "-g", "daemon off;"]
