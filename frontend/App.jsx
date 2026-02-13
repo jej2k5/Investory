@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Shield, Users, DollarSign, Search, BarChart3, Sparkles, ArrowRight, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const Rule1InvestingApp = () => {
   const [symbol, setSymbol] = useState('');
