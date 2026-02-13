@@ -17,6 +17,8 @@ const Rule1InvestingApp = () => {
   const [tableError, setTableError] = useState(null);
   const [sortKey, setSortKey] = useState('updated_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [watchlistSaving, setWatchlistSaving] = useState(false);
+  const [watchlistMessage, setWatchlistMessage] = useState(null);
   
   // User inputs for analysis
   const [meaningScore, setMeaningScore] = useState(0);
@@ -27,6 +29,7 @@ const Rule1InvestingApp = () => {
   const fetchStockData = async (stockSymbol) => {
     setLoading(true);
     setError(null);
+    setWatchlistMessage(null);
     
     try {
       const response = await fetch(`${API_BASE_URL}/stocks/${stockSymbol}`);
@@ -115,6 +118,54 @@ const Rule1InvestingApp = () => {
       setTableError(err.message);
     } finally {
       setTableLoading(false);
+    }
+  };
+
+
+  const addStockToWatchlist = async () => {
+    if (!stockData) return;
+
+    setWatchlistSaving(true);
+    setWatchlistMessage(null);
+
+    const payload = {
+      symbol: stockData.symbol,
+      company_name: stockData.company_name,
+      target_buy_price: valuation?.mos_price ?? null,
+      target_sell_price: valuation?.sticker_price ?? null,
+      alert_enabled: true,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/watchlist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to add stock to watchlist');
+      }
+
+      const savedItem = await response.json();
+      const normalizedRow = {
+        symbol: savedItem.symbol || savedItem.stock_symbol || payload.symbol,
+        company_name: savedItem.company_name || savedItem.company || payload.company_name,
+        target_buy_price: savedItem.target_buy_price ?? savedItem.mos_price ?? payload.target_buy_price,
+        target_sell_price: savedItem.target_sell_price ?? savedItem.sticker_price ?? payload.target_sell_price,
+        alert_enabled: savedItem.alert_enabled ?? savedItem.alert ?? payload.alert_enabled,
+        updated_at: savedItem.updated_at || savedItem.created_at || new Date().toISOString(),
+      };
+
+      setStocksTableData((prev) => {
+        const remaining = prev.filter((row) => row.symbol !== normalizedRow.symbol);
+        return [normalizedRow, ...remaining];
+      });
+      setWatchlistMessage({ type: 'success', text: `${payload.symbol} added to watchlist` });
+    } catch (err) {
+      setWatchlistMessage({ type: 'error', text: err.message });
+    } finally {
+      setWatchlistSaving(false);
     }
   };
 
@@ -467,11 +518,40 @@ const Rule1InvestingApp = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-white/50 mb-1">Current Price</div>
-                      <div className="text-4xl font-bold text-white">
+                      <div className="text-4xl font-bold text-white mb-4">
                         ${stockData.current_metrics.price.toFixed(2)}
                       </div>
+                      <button
+                        onClick={addStockToWatchlist}
+                        disabled={watchlistSaving}
+                        className="px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-300 font-semibold hover:bg-emerald-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                      >
+                        {watchlistSaving ? (
+                          <>
+                            <Loader2 className="animate-spin" size={16} />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <BarChart3 size={16} />
+                            Add to Watchlist
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
+
+
+                  {watchlistMessage && (
+                    <div className={`mb-6 p-4 rounded-2xl border backdrop-blur-xl flex items-center gap-2 ${
+                      watchlistMessage.type === 'success'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                        : 'bg-red-500/10 border-red-500/20 text-red-300'
+                    }`}>
+                      <AlertCircle size={18} />
+                      <span className="font-medium">{watchlistMessage.text}</span>
+                    </div>
+                  )}
 
                   {/* Key Metrics Grid */}
                   <div className="grid grid-cols-4 gap-4">
