@@ -12,6 +12,11 @@ const Rule1InvestingApp = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeView, setActiveView] = useState('search');
+  const [stocksTableData, setStocksTableData] = useState([]);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableError, setTableError] = useState(null);
+  const [sortKey, setSortKey] = useState('updated_at');
+  const [sortDirection, setSortDirection] = useState('desc');
   
   // User inputs for analysis
   const [meaningScore, setMeaningScore] = useState(0);
@@ -85,6 +90,69 @@ const Rule1InvestingApp = () => {
     return scores.reduce((a, b) => a + b, 0) / scores.length;
   };
 
+  const fetchStocksTableData = async () => {
+    setTableLoading(true);
+    setTableError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/watchlist`);
+      if (!response.ok) throw new Error('Unable to load watchlist');
+
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : data.items || data.results || [];
+
+      const normalizedRows = items.map((item) => ({
+        symbol: item.symbol || item.stock_symbol || '--',
+        company_name: item.company_name || item.company || '--',
+        target_buy_price: item.target_buy_price ?? item.mos_price ?? null,
+        target_sell_price: item.target_sell_price ?? item.sticker_price ?? null,
+        alert_enabled: item.alert_enabled ?? item.alert ?? false,
+        updated_at: item.updated_at || item.created_at || null,
+      }));
+
+      setStocksTableData(normalizedRows);
+    } catch (err) {
+      setTableError(err.message);
+    } finally {
+      setTableLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'table') {
+      fetchStocksTableData();
+    }
+  }, [activeView]);
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    setSortKey(key);
+    setSortDirection(key === 'updated_at' ? 'desc' : 'asc');
+  };
+
+  const sortedStocksTableData = [...stocksTableData].sort((a, b) => {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+
+    if (sortKey === 'updated_at') {
+      const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return (aTime - bTime) * direction;
+    }
+
+    const aValue = (a[sortKey] || '').toString().toUpperCase();
+    const bValue = (b[sortKey] || '').toString().toUpperCase();
+    return aValue.localeCompare(bValue) * direction;
+  });
+
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return '--';
+    return `$${Number(value).toFixed(2)}`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Ambient background effects */}
@@ -143,6 +211,18 @@ const Rule1InvestingApp = () => {
                   }`}
                 >
                   Analysis
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActiveView('table')}
+                  className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
+                    activeView === 'table'
+                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
+                      : 'bg-white/5 text-white/60 hover:bg-white/10'
+                  }`}
+                >
+                  Stocks
                 </motion.button>
               </div>
             </div>
@@ -261,6 +341,107 @@ const Rule1InvestingApp = () => {
                 </motion.div>
               </motion.div>
             )}
+
+            {activeView === 'table' && (
+              <motion.div
+                key="table"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="max-w-6xl mx-auto"
+              >
+                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-3xl font-bold text-white">Stock Watchlist</h2>
+                      <p className="text-white/60">Track your target buy/sell levels at a glance.</p>
+                    </div>
+                    <button
+                      onClick={fetchStocksTableData}
+                      className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white/80 hover:bg-white/10 transition-all"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  {tableError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl backdrop-blur-xl"
+                    >
+                      <p className="text-red-400 text-center font-medium">{tableError}</p>
+                    </motion.div>
+                  )}
+
+                  <div className="overflow-x-auto rounded-2xl border border-white/10">
+                    <table className="min-w-full divide-y divide-white/10">
+                      <thead className="bg-white/5">
+                        <tr>
+                          {[
+                            { label: 'Symbol', key: 'symbol' },
+                            { label: 'Company', key: 'company_name' },
+                            { label: 'Target Buy', key: null },
+                            { label: 'Target Sell', key: null },
+                            { label: 'Alert', key: null },
+                            { label: 'Last Updated', key: 'updated_at' },
+                          ].map((column) => (
+                            <th
+                              key={column.label}
+                              onClick={() => column.key && handleSort(column.key)}
+                              className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/60 ${column.key ? 'cursor-pointer hover:text-white' : ''}`}
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                {column.label}
+                                {column.key === sortKey && (
+                                  <span className="text-emerald-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                )}
+                              </span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10 bg-white/5">
+                        {tableLoading ? (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-12 text-center text-white/70">
+                              <span className="inline-flex items-center gap-2">
+                                <Loader2 className="animate-spin" size={18} />
+                                Loading stocks...
+                              </span>
+                            </td>
+                          </tr>
+                        ) : sortedStocksTableData.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-12 text-center text-white/50">No stocks yet.</td>
+                          </tr>
+                        ) : (
+                          sortedStocksTableData.map((row) => (
+                            <tr key={`${row.symbol}-${row.updated_at || 'na'}`} className="hover:bg-white/10 transition-colors">
+                              <td className="px-4 py-3 text-white font-semibold">{row.symbol}</td>
+                              <td className="px-4 py-3 text-white/80">{row.company_name}</td>
+                              <td className="px-4 py-3 text-emerald-400">{formatCurrency(row.target_buy_price)}</td>
+                              <td className="px-4 py-3 text-blue-300">{formatCurrency(row.target_sell_price)}</td>
+                              <td className="px-4 py-3 text-white/70">
+                                {row.alert_enabled ? (
+                                  <span className="inline-flex items-center gap-1 text-emerald-400"><CheckCircle size={14} />On</span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-white/50"><XCircle size={14} />Off</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-white/60">
+                                {row.updated_at ? new Date(row.updated_at).toLocaleDateString() : '--'}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
 
             {activeView === 'analysis' && stockData && (
               <motion.div
