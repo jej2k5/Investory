@@ -290,48 +290,74 @@ def calculate_cagr(start_value: float, end_value: float, years: int) -> float:
         return 0.0
 
 
+def _safe_float(value, default: float = 0.0) -> float:
+    """Safely convert Alpha Vantage-style numeric fields (including 'None') to float."""
+    if value is None:
+        return default
+    if isinstance(value, str) and value.strip().lower() in {"", "none", "null", "nan", "-"}:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def calculate_growth_rates(income_data: List[dict], balance_data: List[dict], cash_flow_data: List[dict]) -> GrowthRates:
     """Calculate 10-year CAGR for various metrics"""
     rates = GrowthRates()
 
+    # Revenue/Sales Growth
     try:
-        # Revenue/Sales Growth
         if len(income_data) >= 2:
-            latest_revenue = float(income_data[0].get("totalRevenue", 0))
-            oldest_revenue = float(income_data[min(9, len(income_data) - 1)].get("totalRevenue", 0))
-            years = min(10, len(income_data))
+            latest_revenue = _safe_float(income_data[0].get("totalRevenue"))
+            oldest_revenue = _safe_float(income_data[min(9, len(income_data) - 1)].get("totalRevenue"))
+            years = min(10, len(income_data)) - 1
             rates.sales = calculate_cagr(oldest_revenue, latest_revenue, years)
-
-        # EPS Growth (using net income as proxy)
-        if len(income_data) >= 2:
-            latest_income = float(income_data[0].get("netIncome", 0))
-            oldest_income = float(income_data[min(9, len(income_data) - 1)].get("netIncome", 0))
-            years = min(10, len(income_data))
-            rates.eps = calculate_cagr(oldest_income, latest_income, years)
-
-        # Book Value Growth
-        if len(balance_data) >= 2:
-            latest_equity = float(balance_data[0].get("totalShareholderEquity", 0))
-            oldest_equity = float(balance_data[min(9, len(balance_data) - 1)].get("totalShareholderEquity", 0))
-            years = min(10, len(balance_data))
-            rates.book_value = calculate_cagr(oldest_equity, latest_equity, years)
-
-        # Cash Flow Growth
-        if len(cash_flow_data) >= 2:
-            latest_cf = float(cash_flow_data[0].get("operatingCashflow", 0))
-            oldest_cf = float(cash_flow_data[min(9, len(cash_flow_data) - 1)].get("operatingCashflow", 0))
-            years = min(10, len(cash_flow_data))
-            rates.cash_flow = calculate_cagr(oldest_cf, latest_cf, years)
-
-        # ROIC (simplified using ROE as proxy)
-        if len(income_data) >= 1 and len(balance_data) >= 1:
-            net_income = float(income_data[0].get("netIncome", 0))
-            equity = float(balance_data[0].get("totalShareholderEquity", 0))
-            if equity > 0:
-                rates.roic = (net_income / equity) * 100
-
     except Exception as e:
-        print(f"Error calculating growth rates: {e}")
+        logger.warning(f"Error calculating sales growth: {e}")
+
+    # EPS Growth (using net income as proxy)
+    try:
+        if len(income_data) >= 2:
+            latest_income = _safe_float(income_data[0].get("netIncome"))
+            oldest_income = _safe_float(income_data[min(9, len(income_data) - 1)].get("netIncome"))
+            years = min(10, len(income_data)) - 1
+            rates.eps = calculate_cagr(oldest_income, latest_income, years)
+    except Exception as e:
+        logger.warning(f"Error calculating EPS growth: {e}")
+
+    # Book Value Growth
+    try:
+        if len(balance_data) >= 2:
+            latest_equity = _safe_float(balance_data[0].get("totalShareholderEquity"))
+            oldest_equity = _safe_float(balance_data[min(9, len(balance_data) - 1)].get("totalShareholderEquity"))
+            years = min(10, len(balance_data)) - 1
+            rates.book_value = calculate_cagr(oldest_equity, latest_equity, years)
+    except Exception as e:
+        logger.warning(f"Error calculating book value growth: {e}")
+
+    # Cash Flow Growth
+    try:
+        if len(cash_flow_data) >= 2:
+            latest_cf = _safe_float(cash_flow_data[0].get("operatingCashflow"))
+            oldest_cf = _safe_float(cash_flow_data[min(9, len(cash_flow_data) - 1)].get("operatingCashflow"))
+            years = min(10, len(cash_flow_data)) - 1
+            rates.cash_flow = calculate_cagr(oldest_cf, latest_cf, years)
+    except Exception as e:
+        logger.warning(f"Error calculating cash flow growth: {e}")
+
+    # ROIC = net income / (equity + long-term debt - cash)
+    try:
+        if len(income_data) >= 1 and len(balance_data) >= 1:
+            net_income = _safe_float(income_data[0].get("netIncome"))
+            equity = _safe_float(balance_data[0].get("totalShareholderEquity"))
+            long_term_debt = _safe_float(balance_data[0].get("longTermDebt"))
+            cash = _safe_float(balance_data[0].get("cashAndCashEquivalentsAtCarryingValue"))
+            invested_capital = equity + long_term_debt - cash
+            if invested_capital > 0:
+                rates.roic = (net_income / invested_capital) * 100
+    except Exception as e:
+        logger.warning(f"Error calculating ROIC: {e}")
 
     return rates
 
@@ -636,14 +662,14 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
             growth_rates = calculate_growth_rates(income_statements, balance_sheets, cash_flows)
 
             current_metrics = CurrentMetrics(
-                price=float(quote_data.get("05. price", 0)),
-                eps=float(overview.get("EPS", 0)),
-                pe_ratio=float(overview.get("PERatio", 0)),
-                book_value=float(overview.get("BookValue", 0)),
-                dividend_yield=float(overview.get("DividendYield", 0)),
-                roe=float(overview.get("ReturnOnEquityTTM", 0)),
-                profit_margin=float(overview.get("ProfitMargin", 0)),
-                market_cap=float(overview.get("MarketCapitalization", 0)),
+                price=_safe_float(quote_data.get("05. price")),
+                eps=_safe_float(overview.get("EPS")),
+                pe_ratio=_safe_float(overview.get("PERatio")),
+                book_value=_safe_float(overview.get("BookValue")),
+                dividend_yield=_safe_float(overview.get("DividendYield")),
+                roe=_safe_float(overview.get("ReturnOnEquityTTM")),
+                profit_margin=_safe_float(overview.get("ProfitMargin")),
+                market_cap=_safe_float(overview.get("MarketCapitalization")),
             )
             company_info = {
                 "name": overview.get("Name", ""),
