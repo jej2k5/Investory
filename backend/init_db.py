@@ -69,7 +69,7 @@ def create_default_admin():
             # Create default admin user
             admin_user = User(
                 username="admin",
-                email="admin@investory.local",
+                email="admin@investory.dev",
                 hashed_password=hash_password("admin123"),
                 full_name="Administrator",
                 role="admin",
