@@ -2,7 +2,14 @@
 Basic tests for Investory API
 """
 
-from main import calculate_cagr, calculate_overall_score, calculate_sticker_price, get_recommendation
+from main import (
+    _safe_float,
+    calculate_cagr,
+    calculate_growth_rates,
+    calculate_overall_score,
+    calculate_sticker_price,
+    get_recommendation,
+)
 
 
 def test_calculate_cagr_basic():
@@ -65,3 +72,44 @@ def test_get_recommendation_hold():
 
 def test_get_recommendation_pass():
     assert get_recommendation(2.0) == "PASS"
+
+
+def test_safe_float_handles_none_strings():
+    assert _safe_float("None") == 0.0
+    assert _safe_float(None) == 0.0
+    assert _safe_float("123.45") == 123.45
+
+
+def test_growth_rates_survive_none_and_calculate_remaining_metrics():
+    income_data = [
+        {"totalRevenue": "200", "netIncome": "None"},
+        {"totalRevenue": "100", "netIncome": "50"},
+    ]
+    balance_data = [
+        {
+            "totalShareholderEquity": "300",
+            "longTermDebt": "100",
+            "cashAndCashEquivalentsAtCarryingValue": "50",
+        },
+        {"totalShareholderEquity": "200"},
+    ]
+    cash_flow_data = [
+        {"operatingCashflow": "120"},
+        {"operatingCashflow": "100"},
+    ]
+
+    result = calculate_growth_rates(income_data, balance_data, cash_flow_data)
+
+    assert round(result.sales, 2) == 100.0
+    assert round(result.eps, 2) == -100.0
+    assert round(result.book_value, 2) == 50.0
+    assert round(result.cash_flow, 2) == 20.0
+    assert round(result.roic, 2) == 0.0
+
+
+def test_growth_rates_uses_nine_year_span_for_ten_reports():
+    income_data = [{"totalRevenue": "200"}] + [{"totalRevenue": "0"}] * 8 + [{"totalRevenue": "100"}]
+
+    result = calculate_growth_rates(income_data, [], [])
+
+    assert round(result.sales, 2) == 8.01
