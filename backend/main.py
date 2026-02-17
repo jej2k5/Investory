@@ -155,7 +155,6 @@ class MassiveClient:
     def __init__(self):
         self.api_key = os.getenv("MASSIVE_API_KEY")
         self._client = None
-        logger.info(f"MassiveClient API Key: {self.api_key}")
         if self.api_key:
             try:
                 from massive import RESTClient as MassiveRESTClient
