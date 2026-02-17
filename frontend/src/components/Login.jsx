@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-<parameter name="motion">{ motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { LogIn, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
