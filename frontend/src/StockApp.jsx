@@ -5,7 +5,7 @@ import { TrendingUp, Shield, Users, DollarSign, Search, BarChart3, Sparkles, Arr
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-const Rule1InvestingApp = () => {
+const StockApp = () => {
   const [symbol, setSymbol] = useState('');
   const [stockData, setStockData] = useState(null);
   const [valuation, setValuation] = useState(null);
@@ -205,83 +205,50 @@ const Rule1InvestingApp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Ambient background effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+    <div className="max-w-7xl mx-auto">
+      {/* View Navigation */}
+      <div className="mb-6 flex gap-2">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setActiveView('search')}
+          className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
+            activeView === 'search'
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
+              : 'bg-white/5 text-white/60 hover:bg-white/10'
+          }`}
+        >
+          Search
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setActiveView('analysis')}
+          disabled={!stockData}
+          className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
+            activeView === 'analysis' && stockData
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
+              : 'bg-white/5 text-white/60 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed'
+          }`}
+        >
+          Analysis
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setActiveView('table')}
+          className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
+            activeView === 'table'
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
+              : 'bg-white/5 text-white/60 hover:bg-white/10'
+          }`}
+        >
+          Stocks
+        </motion.button>
       </div>
 
-      <div className="relative z-10">
-        {/* Header */}
-        <motion.header 
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="border-b border-white/10 backdrop-blur-xl bg-white/5"
-        >
-          <div className="max-w-7xl mx-auto px-6 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-xl flex items-center justify-center"
-                >
-                  <Sparkles className="text-white" size={24} />
-                </motion.div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white tracking-tight">
-                    Rule #1 Investing
-                  </h1>
-                  <p className="text-sm text-emerald-400 font-medium">Don't lose money</p>
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActiveView('search')}
-                  className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
-                    activeView === 'search'
-                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
-                  }`}
-                >
-                  Search
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActiveView('analysis')}
-                  disabled={!stockData}
-                  className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
-                    activeView === 'analysis' && stockData
-                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed'
-                  }`}
-                >
-                  Analysis
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActiveView('table')}
-                  className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
-                    activeView === 'table'
-                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
-                  }`}
-                >
-                  Stocks
-                </motion.button>
-              </div>
-            </div>
-          </div>
-        </motion.header>
-
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-6 py-12">
+      {/* Main Content */}
+      <div>
           <AnimatePresence mode="wait">
             {activeView === 'search' && (
               <motion.div
@@ -738,10 +705,9 @@ const Rule1InvestingApp = () => {
               </motion.div>
             )}
           </AnimatePresence>
-        </main>
       </div>
     </div>
   );
 };
 
-export default Rule1InvestingApp;
+export default StockApp;
