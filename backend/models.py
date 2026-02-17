@@ -1,5 +1,5 @@
 """
-Database models for Rule #1 Investing Platform
+Database models for Investory Platform
 """
 
 from datetime import datetime
@@ -12,14 +12,17 @@ Base = declarative_base()
 
 
 class User(Base):
-    """User accounts"""
+    """User accounts with role-based access control"""
 
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=True, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255))
+    role = Column(String(20), default="user", nullable=False)  # 'admin' or 'user'
+    requires_password_change = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_login = Column(DateTime)
     is_active = Column(Boolean, default=True, nullable=False)
@@ -29,7 +32,7 @@ class User(Base):
     watchlists = relationship("Watchlist", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}')>"
+        return f"<User(id={self.id}, username='{self.username}', role='{self.role}')>"
 
 
 class Analysis(Base):

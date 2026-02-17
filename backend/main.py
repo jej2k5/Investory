@@ -26,13 +26,29 @@ from schemas import (
     AnalysisUpdate,
     CurrentMetrics,
     GrowthRates,
+    LoginRequest,
     MoatEvaluation,
+    PasswordChangeRequest,
     StockData,
+    TokenResponse,
+    UserRegisterRequest,
+    UserResponse,
     ValuationInput,
     ValuationOutput,
     WatchlistCreate,
     WatchlistResponse,
     WatchlistUpdate,
+)
+
+# Import authentication utilities
+from auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_active_user,
+    get_current_admin_user,
+    get_current_user,
+    hash_password,
+    verify_password,
 )
 
 load_dotenv()
@@ -230,6 +246,168 @@ async def root():
         "database": "PostgreSQL",
         "timestamp": datetime.utcnow().isoformat(),
     }
+
+
+# ==================== AUTHENTICATION ENDPOINTS ====================
+
+
+@app.post("/api/auth/login", response_model=TokenResponse)
+async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
+    """
+    Authenticate user and return JWT token.
+
+    Default admin credentials:
+    - username: admin
+    - password: admin123 (must be changed on first login)
+    """
+    user = authenticate_user(db, credentials.username, credentials.password)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive",
+        )
+
+    # Update last login
+    user.last_login = datetime.utcnow()
+    db.commit()
+
+    # Create access token
+    access_token = create_access_token(data={"sub": user.username, "role": user.role})
+
+    return TokenResponse(
+        access_token=access_token,
+        requires_password_change=user.requires_password_change
+    )
+
+
+@app.post("/api/auth/change-password")
+async def change_password(
+    password_change: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Change user password. Verifies current password before allowing change.
+    """
+    # Verify current password
+    if not verify_password(password_change.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    # Update password
+    current_user.hashed_password = hash_password(password_change.new_password)
+    current_user.requires_password_change = False
+    db.commit()
+
+    return {"message": "Password changed successfully"}
+
+
+@app.post("/api/auth/register", response_model=UserResponse)
+async def register_user(
+    user_data: UserRegisterRequest,
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Register a new user. Admin privileges required.
+
+    Only administrators can create new user accounts.
+    """
+    # Check if username already exists
+    existing_user = db.query(User).filter(User.username == user_data.username).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+        )
+
+    # Check if email already exists (if provided)
+    if user_data.email:
+        existing_email = db.query(User).filter(User.email == user_data.email).first()
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+    # Create new user
+    new_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        hashed_password=hash_password(user_data.password),
+        full_name=user_data.full_name,
+        role=user_data.role,
+        requires_password_change=False,  # New users don't need to change password immediately
+        is_active=True
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return UserResponse.from_orm(new_user)
+
+
+@app.get("/api/auth/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """
+    Get current authenticated user information.
+    """
+    return UserResponse.from_orm(current_user)
+
+
+@app.get("/api/users", response_model=List[UserResponse])
+async def list_users(
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100)
+):
+    """
+    List all users. Admin privileges required.
+    """
+    users = db.query(User).offset(skip).limit(limit).all()
+    return [UserResponse.from_orm(user) for user in users]
+
+
+@app.delete("/api/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a user. Admin privileges required.
+
+    Cannot delete yourself.
+    """
+    if user_id == current_admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    db.delete(user)
+    db.commit()
+
+    return {"message": "User deleted successfully", "id": user_id}
 
 
 @app.get("/api/stocks/{symbol}", response_model=StockData)
