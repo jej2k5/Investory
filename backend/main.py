@@ -133,6 +133,153 @@ class AlphaVantageClient:
 alpha_vantage = AlphaVantageClient()
 
 
+def _extract_value(data: dict, key: str) -> float:
+    """Extract a numeric value from Massive financials dict.
+
+    Massive represents financial line items as {'value': <number>, 'unit': 'USD'},
+    so this helper normalises both that format and plain scalars to float.
+    """
+    item = data.get(key, {})
+    if isinstance(item, dict):
+        return float(item.get("value") or 0)
+    return float(item or 0)
+
+
+class MassiveClient:
+    """Client for Massive.com API (formerly Polygon.io) as an alternative stock-data source.
+
+    Enabled by setting the MASSIVE_API_KEY environment variable.  When available it
+    takes precedence over Alpha Vantage for the /api/stocks/{symbol} endpoint.
+    """
+
+    def __init__(self):
+        self.api_key = os.getenv("MASSIVE_API_KEY")
+        self._client = None
+        if self.api_key:
+            try:
+                from massive import RESTClient as MassiveRESTClient
+                self._client = MassiveRESTClient(api_key=self.api_key)
+                logger.info("MassiveClient initialised successfully")
+            except ImportError:
+                logger.warning("massive package not installed; Massive provider unavailable")
+
+    def is_available(self) -> bool:
+        return self._client is not None
+
+    async def fetch_stock_data(self, symbol: str) -> tuple:
+        """Fetch stock data from Massive and return (CurrentMetrics, GrowthRates, company_info).
+
+        The massive SDK is synchronous, so each blocking call is offloaded to a
+        thread via asyncio.to_thread so it does not block the event loop.
+        """
+        details, snapshot, financials = await asyncio.gather(
+            asyncio.to_thread(self._get_ticker_details, symbol),
+            asyncio.to_thread(self._get_snapshot, symbol),
+            asyncio.to_thread(self._get_financials, symbol),
+        )
+        return self._map_to_schema(details, snapshot, financials)
+
+    def _get_ticker_details(self, symbol: str) -> dict:
+        try:
+            result = self._client.get_ticker_details(symbol)
+            return result.results.__dict__ if result.results else {}
+        except Exception as e:
+            logger.warning(f"Massive ticker details fetch failed for {symbol}: {e}")
+            return {}
+
+    def _get_snapshot(self, symbol: str) -> dict:
+        try:
+            result = self._client.get_snapshot_ticker("stocks", symbol)
+            return result.ticker.__dict__ if result.ticker else {}
+        except Exception as e:
+            logger.warning(f"Massive snapshot fetch failed for {symbol}: {e}")
+            return {}
+
+    def _get_financials(self, symbol: str) -> list:
+        try:
+            return list(self._client.vx.list_stock_financials(symbol, timeframe="annual", limit=10))
+        except Exception as e:
+            logger.warning(f"Massive financials fetch failed for {symbol}: {e}")
+            return []
+
+    def _map_to_schema(self, details: dict, snapshot: dict, financials: list):
+        """Map raw Massive API data to Investory's CurrentMetrics / GrowthRates / company_info."""
+        # Current price: prefer today's close, fall back to previous day's close
+        day = snapshot.get("day") or {}
+        prev_day = snapshot.get("prevDay") or {}
+        price = float(day.get("c") or prev_day.get("c") or 0)
+
+        market_cap = float(details.get("market_cap") or 0)
+        name = details.get("name") or ""
+        description = details.get("description") or ""
+        industry = details.get("sic_description")  # closest equivalent in Massive
+        sector = None  # Massive does not expose a sector field
+
+        income_rows, balance_rows, cashflow_rows = [], [], []
+        eps = pe_ratio = book_value = roe = profit_margin = dividend_yield = 0.0
+
+        for fin in financials:
+            fin_data = fin.financials if hasattr(fin, "financials") else {}
+            inc = fin_data.get("income_statement") or {}
+            bal = fin_data.get("balance_sheet") or {}
+            cf = fin_data.get("cash_flow_statement") or {}
+
+            income_rows.append({
+                "totalRevenue": _extract_value(inc, "revenues"),
+                "netIncome": _extract_value(inc, "net_income_loss"),
+            })
+            balance_rows.append({
+                "totalShareholderEquity": _extract_value(bal, "equity"),
+            })
+            cashflow_rows.append({
+                "operatingCashflow": _extract_value(cf, "net_cash_flow_from_operating_activities"),
+            })
+
+        if financials:
+            latest = financials[0]
+            fin_data = latest.financials if hasattr(latest, "financials") else {}
+            inc = fin_data.get("income_statement") or {}
+            bal = fin_data.get("balance_sheet") or {}
+
+            net_income = _extract_value(inc, "net_income_loss")
+            equity = _extract_value(bal, "equity")
+            shares_outstanding = float(details.get("share_class_shares_outstanding") or 0)
+
+            # EPS: prefer explicit field, fall back to net_income / shares
+            diluted_eps = _extract_value(inc, "diluted_earnings_per_share") or _extract_value(inc, "basic_earnings_per_share")
+            if diluted_eps:
+                eps = diluted_eps
+            elif net_income and shares_outstanding:
+                eps = net_income / shares_outstanding
+
+            book_value = (equity / shares_outstanding) if equity and shares_outstanding else 0.0
+            pe_ratio = (price / eps) if eps else 0.0
+            roe = ((net_income / equity) * 100) if equity and net_income else 0.0
+
+        current_metrics = CurrentMetrics(
+            price=price,
+            eps=eps,
+            pe_ratio=pe_ratio,
+            book_value=book_value,
+            dividend_yield=dividend_yield,
+            roe=roe,
+            profit_margin=profit_margin,
+            market_cap=market_cap,
+        )
+        growth_rates = calculate_growth_rates(income_rows, balance_rows, cashflow_rows)
+        company_info = {
+            "name": name,
+            "description": description,
+            "sector": sector,
+            "industry": industry,
+        }
+        return current_metrics, growth_rates, company_info
+
+
+# Global client instances
+massive_client = MassiveClient()
+
+
 def calculate_cagr(start_value: float, end_value: float, years: int) -> float:
     """Calculate Compound Annual Growth Rate"""
     if start_value <= 0 or years <= 0:
@@ -445,63 +592,76 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
             )
 
     try:
-        # Fetch data from Alpha Vantage
-        overview_task = alpha_vantage.fetch("OVERVIEW", symbol, db)
-        quote_task = alpha_vantage.fetch("GLOBAL_QUOTE", symbol, db)
-        income_task = alpha_vantage.fetch("INCOME_STATEMENT", symbol, db)
-        balance_task = alpha_vantage.fetch("BALANCE_SHEET", symbol, db)
-        cashflow_task = alpha_vantage.fetch("CASH_FLOW", symbol, db)
+        if massive_client.is_available():
+            # ── Massive.com provider ──────────────────────────────────────────
+            logger.info(f"Fetching stock data from Massive for {symbol}")
+            current_metrics, growth_rates, company_info = await massive_client.fetch_stock_data(symbol)
+            if not company_info.get("name"):
+                raise HTTPException(status_code=404, detail=f"Stock symbol {symbol} not found")
+        else:
+            # ── Alpha Vantage provider (default) ─────────────────────────────
+            overview_task = alpha_vantage.fetch("OVERVIEW", symbol, db)
+            quote_task = alpha_vantage.fetch("GLOBAL_QUOTE", symbol, db)
+            income_task = alpha_vantage.fetch("INCOME_STATEMENT", symbol, db)
+            balance_task = alpha_vantage.fetch("BALANCE_SHEET", symbol, db)
+            cashflow_task = alpha_vantage.fetch("CASH_FLOW", symbol, db)
 
-        overview, quote, income, balance, cashflow = await asyncio.gather(
-            overview_task, quote_task, income_task, balance_task, cashflow_task
-        )
-
-        logger.info(
-            f"Received Alpha Vantage payloads for {symbol}: "
-            f"income_reports={len(income.get('annualReports', []))}, "
-            f"balance_reports={len(balance.get('annualReports', []))}, "
-            f"cashflow_reports={len(cashflow.get('annualReports', []))}, "
-            f"overview_keys={list(overview.keys())[:8]}"
-        )
-
-        if not overview.get("Symbol"):
-            logger.warning(
-                f"Stock symbol lookup failed for {symbol}: "
-                f"error_message={overview.get('Error Message')}, "
-                f"information={overview.get('Information')}, "
-                f"note={overview.get('Note')}, "
-                f"payload_preview={str(overview)[:200]}"
+            overview, quote, income, balance, cashflow = await asyncio.gather(
+                overview_task, quote_task, income_task, balance_task, cashflow_task
             )
-            raise HTTPException(status_code=404, detail=f"Stock symbol {symbol} not found")
 
-        quote_data = quote.get("Global Quote", {})
-        income_statements = income.get("annualReports", [])
-        balance_sheets = balance.get("annualReports", [])
-        cash_flows = cashflow.get("annualReports", [])
+            logger.info(
+                f"Received Alpha Vantage payloads for {symbol}: "
+                f"income_reports={len(income.get('annualReports', []))}, "
+                f"balance_reports={len(balance.get('annualReports', []))}, "
+                f"cashflow_reports={len(cashflow.get('annualReports', []))}, "
+                f"overview_keys={list(overview.keys())[:8]}"
+            )
 
-        growth_rates = calculate_growth_rates(income_statements, balance_sheets, cash_flows)
+            if not overview.get("Symbol"):
+                logger.warning(
+                    f"Stock symbol lookup failed for {symbol}: "
+                    f"error_message={overview.get('Error Message')}, "
+                    f"information={overview.get('Information')}, "
+                    f"note={overview.get('Note')}, "
+                    f"payload_preview={str(overview)[:200]}"
+                )
+                raise HTTPException(status_code=404, detail=f"Stock symbol {symbol} not found")
 
-        current_metrics = CurrentMetrics(
-            price=float(quote_data.get("05. price", 0)),
-            eps=float(overview.get("EPS", 0)),
-            pe_ratio=float(overview.get("PERatio", 0)),
-            book_value=float(overview.get("BookValue", 0)),
-            dividend_yield=float(overview.get("DividendYield", 0)),
-            roe=float(overview.get("ReturnOnEquityTTM", 0)),
-            profit_margin=float(overview.get("ProfitMargin", 0)),
-            market_cap=float(overview.get("MarketCapitalization", 0)),
-        )
+            quote_data = quote.get("Global Quote", {})
+            income_statements = income.get("annualReports", [])
+            balance_sheets = balance.get("annualReports", [])
+            cash_flows = cashflow.get("annualReports", [])
 
-        # Update cache in database
+            growth_rates = calculate_growth_rates(income_statements, balance_sheets, cash_flows)
+
+            current_metrics = CurrentMetrics(
+                price=float(quote_data.get("05. price", 0)),
+                eps=float(overview.get("EPS", 0)),
+                pe_ratio=float(overview.get("PERatio", 0)),
+                book_value=float(overview.get("BookValue", 0)),
+                dividend_yield=float(overview.get("DividendYield", 0)),
+                roe=float(overview.get("ReturnOnEquityTTM", 0)),
+                profit_margin=float(overview.get("ProfitMargin", 0)),
+                market_cap=float(overview.get("MarketCapitalization", 0)),
+            )
+            company_info = {
+                "name": overview.get("Name", ""),
+                "sector": overview.get("Sector"),
+                "industry": overview.get("Industry"),
+                "description": overview.get("Description"),
+            }
+
+        # ── Cache update (common to both providers) ───────────────────────────
         cached = db.query(StockCache).filter(StockCache.symbol == symbol).first()
         now = datetime.utcnow()
 
         if cached:
             # Update existing cache
-            cached.company_name = overview.get("Name", "")
-            cached.sector = overview.get("Sector")
-            cached.industry = overview.get("Industry")
-            cached.description = overview.get("Description")
+            cached.company_name = company_info.get("name", "")
+            cached.sector = company_info.get("sector")
+            cached.industry = company_info.get("industry")
+            cached.description = company_info.get("description")
             cached.current_price = current_metrics.price
             cached.eps = current_metrics.eps
             cached.pe_ratio = current_metrics.pe_ratio
@@ -521,10 +681,10 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
             # Create new cache entry
             cached = StockCache(
                 symbol=symbol,
-                company_name=overview.get("Name", ""),
-                sector=overview.get("Sector"),
-                industry=overview.get("Industry"),
-                description=overview.get("Description"),
+                company_name=company_info.get("name", ""),
+                sector=company_info.get("sector"),
+                industry=company_info.get("industry"),
+                description=company_info.get("description"),
                 current_price=current_metrics.price,
                 eps=current_metrics.eps,
                 pe_ratio=current_metrics.pe_ratio,
@@ -548,10 +708,10 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
 
         return StockData(
             symbol=symbol,
-            company_name=overview.get("Name", ""),
-            sector=overview.get("Sector"),
-            industry=overview.get("Industry"),
-            description=overview.get("Description"),
+            company_name=company_info.get("name", ""),
+            sector=company_info.get("sector"),
+            industry=company_info.get("industry"),
+            description=company_info.get("description"),
             current_metrics=current_metrics,
             growth_rates=growth_rates,
             fetched_at=now,
