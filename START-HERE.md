@@ -79,6 +79,78 @@ npm install
 npm run dev
 ```
 
+## 🔐 First Login - Authentication
+
+Investory includes a complete authentication system with role-based access control.
+
+### Default Admin Credentials
+
+On first startup, a default admin user is automatically created:
+
+```
+Username: admin
+Password: admin123
+```
+
+**⚠️ IMPORTANT:** You **MUST** change this password on first login!
+
+### Authentication Features
+
+- ✅ JWT token-based authentication
+- ✅ Forced password change for default admin
+- ✅ Role-based access control (admin/user)
+- ✅ Admin-only user registration
+- ✅ Secure password hashing with bcrypt
+- ✅ User management interface
+
+### User Roles
+
+**Admin Users Can:**
+- Analyze stocks and manage watchlists
+- Create new user accounts
+- View all users
+- Delete user accounts
+- Change their own password
+
+**Regular Users Can:**
+- Analyze stocks and manage watchlists
+- Change their own password
+
+### First Time Login Flow
+
+1. **Start the application** and visit http://localhost:3000
+2. **Login** with default credentials (admin/admin123)
+3. **Change password** - You'll be forced to change the default password
+4. **Create additional users** (optional) - Navigate to "User Management" to add more users
+
+### Managing Users (Admin Only)
+
+```bash
+# After logging in as admin, click "User Management" in the top nav
+# You can:
+# - Create new users with custom usernames and passwords
+# - Assign admin or regular user roles
+# - Delete users (except yourself)
+# - View all user accounts and their status
+```
+
+### Security Notes
+
+1. **Change the SECRET_KEY in production**
+   ```bash
+   # Generate a secure secret key:
+   python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+   # Add to .env file:
+   SECRET_KEY=your-generated-secret-key
+   ```
+
+2. **JWT tokens expire after 30 minutes** for security
+
+3. **Passwords must be at least 8 characters**
+
+4. **Only admins can register new users** - No public registration
+
 ## 📚 What's Included?
 
 ### Core Application
