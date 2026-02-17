@@ -100,7 +100,7 @@ class AlphaVantageClient:
         """Fetch data from Alpha Vantage"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
-                logger.info("Fetching Alpha Vantage data", extra={"function": function, "symbol": symbol})
+                logger.info(f"Fetching Alpha Vantage data: function={function}, symbol={symbol}")
                 response = await client.get(
                     self.base_url,
                     params={
@@ -114,28 +114,17 @@ class AlphaVantageClient:
 
                 if payload.get("Error Message"):
                     logger.warning(
-                        "Alpha Vantage returned an error message",
-                        extra={
-                            "function": function,
-                            "symbol": symbol,
-                            "error_message": payload.get("Error Message"),
-                        },
+                        f"Alpha Vantage returned error for {symbol} ({function}): {payload.get('Error Message')}"
                     )
                 elif payload.get("Information"):
                     logger.warning(
-                        "Alpha Vantage returned informational message",
-                        extra={
-                            "function": function,
-                            "symbol": symbol,
-                            "info_message": payload.get("Information"),
-                        },
+                        f"Alpha Vantage returned info for {symbol} ({function}): {payload.get('Information')}"
                     )
 
                 return payload
             except Exception as e:
                 logger.exception(
-                    "Alpha Vantage request failed",
-                    extra={"function": function, "symbol": symbol},
+                    f"Alpha Vantage request failed for {symbol} ({function})"
                 )
                 raise HTTPException(status_code=500, detail=f"Error fetching from Alpha Vantage: {str(e)}")
 
@@ -421,17 +410,14 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
     """
     requested_symbol = symbol
     symbol = symbol.upper()
-    logger.info(
-        "Stock lookup request received",
-        extra={"requested_symbol": requested_symbol, "normalized_symbol": symbol, "force_refresh": force_refresh},
-    )
+    logger.info(f"Stock lookup request received: symbol={symbol} (requested as '{requested_symbol}'), force_refresh={force_refresh}")
 
     # Check cache first (unless force refresh)
     if not force_refresh:
         cached = db.query(StockCache).filter(StockCache.symbol == symbol, StockCache.expires_at > datetime.utcnow()).first()
 
         if cached:
-            logger.info("Returning stock data from cache", extra={"symbol": symbol, "fetched_at": str(cached.fetched_at)})
+            logger.info(f"Returning stock data from cache: symbol={symbol}, fetched_at={cached.fetched_at}")
             return StockData(
                 symbol=cached.symbol,
                 company_name=cached.company_name or "",
@@ -471,27 +457,20 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
         )
 
         logger.info(
-            "Received Alpha Vantage payloads",
-            extra={
-                "symbol": symbol,
-                "overview_keys": list(overview.keys())[:8],
-                "quote_keys": list(quote.keys())[:8],
-                "income_report_count": len(income.get("annualReports", [])),
-                "balance_report_count": len(balance.get("annualReports", [])),
-                "cashflow_report_count": len(cashflow.get("annualReports", [])),
-            },
+            f"Received Alpha Vantage payloads for {symbol}: "
+            f"income_reports={len(income.get('annualReports', []))}, "
+            f"balance_reports={len(balance.get('annualReports', []))}, "
+            f"cashflow_reports={len(cashflow.get('annualReports', []))}, "
+            f"overview_keys={list(overview.keys())[:8]}"
         )
 
         if not overview.get("Symbol"):
             logger.warning(
-                "Stock symbol lookup returned no overview symbol",
-                extra={
-                    "symbol": symbol,
-                    "overview_error_message": overview.get("Error Message"),
-                    "overview_information": overview.get("Information"),
-                    "overview_note": overview.get("Note"),
-                    "overview_payload_preview": str(overview)[:500],
-                },
+                f"Stock symbol lookup failed for {symbol}: "
+                f"error_message={overview.get('Error Message')}, "
+                f"information={overview.get('Information')}, "
+                f"note={overview.get('Note')}, "
+                f"payload_preview={str(overview)[:200]}"
             )
             raise HTTPException(status_code=404, detail=f"Stock symbol {symbol} not found")
 
@@ -565,7 +544,7 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
             db.add(cached)
 
         db.commit()
-        logger.info("Stock cache updated", extra={"symbol": symbol, "cache_expires_at": str(cached.expires_at)})
+        logger.info(f"Stock cache updated for {symbol}: expires_at={cached.expires_at}")
 
         return StockData(
             symbol=symbol,
@@ -579,10 +558,10 @@ async def get_stock_data(symbol: str, db: Session = Depends(get_db), force_refre
         )
 
     except HTTPException:
-        logger.warning("Returning HTTPException for stock lookup", extra={"symbol": symbol})
+        logger.warning(f"Returning HTTPException for stock lookup: symbol={symbol}")
         raise
     except Exception as e:
-        logger.exception("Unexpected error while processing stock data", extra={"symbol": symbol})
+        logger.exception(f"Unexpected error while processing stock data for {symbol}")
         raise HTTPException(status_code=500, detail=f"Error processing stock data: {str(e)}")
 
 
