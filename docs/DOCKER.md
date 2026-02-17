@@ -1,6 +1,6 @@
 # Docker Setup Guide
 
-This guide explains how to run the Rule #1 Investing Platform using Docker.
+This guide explains how to run the Investory using Docker.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ This guide explains how to run the Rule #1 Investing Platform using Docker.
 
 ```bash
 # Navigate to project directory
-cd rule1-app
+cd investory
 
 # Copy environment file
 cp .env.example .env
@@ -122,7 +122,7 @@ docker compose exec backend python init_db.py
 
 # Open shell in container
 docker compose exec backend sh
-docker compose exec db psql -U postgres -d rule1_investing
+docker compose exec db psql -U postgres -d investory
 ```
 
 ### Monitoring
@@ -148,7 +148,7 @@ Edit `.env` file to configure:
 
 ```env
 # Database
-DB_NAME=rule1_investing
+DB_NAME=investory
 DB_USER=postgres
 DB_PASSWORD=your_secure_password
 DB_PORT=5432
@@ -205,20 +205,20 @@ docker compose -f docker compose.prod.yml logs -f
 
 ```bash
 # Using psql from host
-docker compose exec db psql -U postgres -d rule1_investing
+docker compose exec db psql -U postgres -d investory
 
 # Using psql commands
-docker compose exec db psql -U postgres -d rule1_investing -c "SELECT COUNT(*) FROM analyses;"
+docker compose exec db psql -U postgres -d investory -c "SELECT COUNT(*) FROM analyses;"
 ```
 
 ### Backup Database
 
 ```bash
 # Create backup
-docker compose exec db pg_dump -U postgres rule1_investing > backup_$(date +%Y%m%d).sql
+docker compose exec db pg_dump -U postgres investory > backup_$(date +%Y%m%d).sql
 
 # Restore backup
-cat backup_20240213.sql | docker compose exec -T db psql -U postgres -d rule1_investing
+cat backup_20240213.sql | docker compose exec -T db psql -U postgres -d investory
 ```
 
 ### Reset Database
@@ -268,7 +268,7 @@ docker compose ps db
 docker compose logs db
 
 # Verify connection string in .env
-DATABASE_URL=postgresql://postgres:postgres@db:5432/rule1_investing
+DATABASE_URL=postgresql://postgres:postgres@db:5432/investory
 ```
 
 ### "Database not found" Error
@@ -324,7 +324,7 @@ docker compose build --no-cache
 docker volume ls
 
 # Inspect volume
-docker volume inspect rule1-app_postgres_data
+docker volume inspect investory_postgres_data
 
 # Remove unused volumes
 docker volume prune
@@ -397,7 +397,7 @@ docker compose -f docker compose.monitoring.yml up -d
 # Automated backup script
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
-docker compose exec -T db pg_dump -U postgres rule1_investing > "backups/backup_$DATE.sql"
+docker compose exec -T db pg_dump -U postgres investory > "backups/backup_$DATE.sql"
 find backups/ -mtime +30 -delete
 ```
 

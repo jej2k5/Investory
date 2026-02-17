@@ -53,12 +53,12 @@ def create_database():
 def main():
     """Main initialization function"""
     print("=" * 60)
-    print("Rule #1 Investing Database Setup")
+    print("Investory Database Setup")
     print("=" * 60)
     print()
 
     # Check if DATABASE_URL is set
-    if not DATABASE_URL or DATABASE_URL == "postgresql://postgres:postgres@localhost:5432/rule1_investing":
+    if not DATABASE_URL or DATABASE_URL == "postgresql://postgres:postgres@localhost:5432/investory":
         print("⚠️  Using default DATABASE_URL")
         print("   Consider setting a custom DATABASE_URL in .env file")
         print()

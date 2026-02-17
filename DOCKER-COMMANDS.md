@@ -68,7 +68,7 @@ docker compose exec backend sh
 docker compose exec frontend sh
 
 # Database shell
-docker compose exec db psql -U postgres -d rule1_investing
+docker compose exec db psql -U postgres -d investory
 ```
 
 ### Production Deployment

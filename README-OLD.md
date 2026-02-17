@@ -1,8 +1,8 @@
-# Rule #1 Investing Platform
+# Investory
 
-A modern, API-first web application for analyzing stocks using Phil Town's proven "Rule #1 Investing" methodology. Built with Python FastAPI backend and React frontend.
+A modern, API-first web application for analyzing stocks using Phil Town's proven "Investory" methodology. Built with Python FastAPI backend and React frontend.
 
-![Rule #1 Investing](https://img.shields.io/badge/version-1.0.0-blue)
+![Investory](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-cyan)
 ![React](https://img.shields.io/badge/react-18.2-purple)
@@ -18,7 +18,7 @@ This platform helps investors evaluate stocks using the Four Ms framework:
 ## 🏗️ Architecture
 
 ```
-rule1-app/
+investory/
 ├── backend/           # Python FastAPI REST API
 │   ├── main.py       # API server with all endpoints
 │   ├── requirements.txt
@@ -295,7 +295,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- Phil Town for the Rule #1 Investing methodology
+- Phil Town for the Investory methodology
 - Alpha Vantage for providing free financial data API
 - The FastAPI and React communities
 
@@ -305,4 +305,4 @@ For questions or support, please open an issue on GitHub.
 
 ---
 
-**Remember**: Rule #1 - Don't lose money. Rule #2 - Don't forget Rule #1.
+**Remember**: Invest smarter. Track what matters.

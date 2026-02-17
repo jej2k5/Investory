@@ -1,7 +1,7 @@
-# Rule #1 Investing Platform - Project Structure
+# Investory - Project Structure
 
 ```
-rule1-app/
+investory/
 │
 ├── backend/                      # Python FastAPI Backend
 │   ├── main.py                   # Main API server with all endpoints

@@ -13,10 +13,10 @@ from sqlalchemy.pool import StaticPool
 load_dotenv()
 
 # Database URL from environment variable
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/rule1_investing")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/investory")
 
 # For SQLite (development/testing)
-# DATABASE_URL = "sqlite:///./rule1_investing.db"
+# DATABASE_URL = "sqlite:///./investory.db"
 
 # Create engine
 if DATABASE_URL.startswith("sqlite"):

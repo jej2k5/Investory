@@ -1,6 +1,6 @@
 # GitHub Actions CI/CD Documentation
 
-This document explains the automated workflows configured for the Rule #1 Investing Platform.
+This document explains the automated workflows configured for the Investory.
 
 ## Overview
 
@@ -103,11 +103,11 @@ CODECOV_TOKEN: Your Codecov token
 **Accessing Images:**
 ```bash
 # Pull latest images
-docker pull ghcr.io/YOUR_USERNAME/rule1-app/backend:latest
-docker pull ghcr.io/YOUR_USERNAME/rule1-app/frontend:latest
+docker pull ghcr.io/YOUR_USERNAME/investory/backend:latest
+docker pull ghcr.io/YOUR_USERNAME/investory/frontend:latest
 
 # Pull specific version
-docker pull ghcr.io/YOUR_USERNAME/rule1-app/backend:v1.0.0
+docker pull ghcr.io/YOUR_USERNAME/investory/backend:v1.0.0
 ```
 
 ### 3. Release Workflow (`release.yml`)
@@ -229,8 +229,8 @@ Replace `${{ github.repository }}` references with your repo:
 ```yaml
 # In docker-build.yml
 env:
-  IMAGE_NAME_BACKEND: YOUR_USERNAME/rule1-app/backend
-  IMAGE_NAME_FRONTEND: YOUR_USERNAME/rule1-app/frontend
+  IMAGE_NAME_BACKEND: YOUR_USERNAME/investory/backend
+  IMAGE_NAME_FRONTEND: YOUR_USERNAME/investory/frontend
 ```
 
 ### 2. Customize Workflows
@@ -272,9 +272,9 @@ act -j build-backend --secret-file .env.secrets
 Add these to your README.md:
 
 ```markdown
-![CI](https://github.com/YOUR_USERNAME/rule1-app/workflows/CI%2FCD%20Pipeline/badge.svg)
-![Docker](https://github.com/YOUR_USERNAME/rule1-app/workflows/Build%20and%20Push%20Docker%20Images/badge.svg)
-![Release](https://github.com/YOUR_USERNAME/rule1-app/workflows/Release/badge.svg)
+![CI](https://github.com/YOUR_USERNAME/investory/workflows/CI%2FCD%20Pipeline/badge.svg)
+![Docker](https://github.com/YOUR_USERNAME/investory/workflows/Build%20and%20Push%20Docker%20Images/badge.svg)
+![Release](https://github.com/YOUR_USERNAME/investory/workflows/Release/badge.svg)
 ```
 
 ## Monitoring Workflows

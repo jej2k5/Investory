@@ -86,7 +86,7 @@ docker compose logs db
 
 **Solution 3: Verify DATABASE_URL in .env**
 ```env
-DATABASE_URL=postgresql://postgres:postgres@db:5432/rule1_investing
+DATABASE_URL=postgresql://postgres:postgres@db:5432/investory
 ```
 
 ---
@@ -201,7 +201,7 @@ RUN npm install
 
 **Error:**
 ```
-Database rule1_investing does not exist
+Database investory does not exist
 ```
 
 **Solution 1: Wait for database startup**
@@ -233,7 +233,7 @@ docker compose logs backend
 docker compose down -v
 
 # Remove all images
-docker rmi $(docker images -q rule1-app*)
+docker rmi $(docker images -q investory*)
 
 # Clean system
 docker system prune -a
@@ -296,7 +296,7 @@ docker compose exec backend sh
 docker compose exec frontend sh
 
 # Database shell
-docker compose exec db psql -U postgres -d rule1_investing
+docker compose exec db psql -U postgres -d investory
 ```
 
 ### Test Services Manually

@@ -1,5 +1,5 @@
 """
-Basic tests for Rule #1 Investing API
+Basic tests for Investory API
 """
 
 from main import calculate_cagr, calculate_overall_score, calculate_sticker_price, get_recommendation

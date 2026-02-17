@@ -1,4 +1,4 @@
-# Rule #1 Investing API Documentation
+# Investory API Documentation
 
 ## Base URL
 ```
@@ -24,7 +24,7 @@ Check API health status.
 ```json
 {
   "status": "healthy",
-  "service": "Rule #1 Investing API",
+  "service": "Investory API",
   "version": "1.0.0",
   "timestamp": "2024-02-13T10:30:00Z"
 }

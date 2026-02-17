@@ -4,10 +4,10 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:14-alpine
-    container_name: rule1-postgres
+    container_name: investory-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-rule1_investing}
+      POSTGRES_DB: ${DB_NAME:-investory}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
@@ -21,17 +21,17 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - rule1-network
+      - investory-network
 
   # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: rule1-backend
+    container_name: investory-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-rule1_investing}
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-investory}
       ALPHA_VANTAGE_KEY: ${ALPHA_VANTAGE_KEY:-demo}
       API_HOST: 0.0.0.0
       API_PORT: 8000
@@ -47,7 +47,7 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - rule1-network
+      - investory-network
     volumes:
       - ./backend:/app
     command: >
@@ -65,7 +65,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: rule1-frontend
+    container_name: investory-frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-3000}:80"
@@ -77,15 +77,15 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - rule1-network
+      - investory-network
 
   # pgAdmin (Optional - for database management)
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: rule1-pgadmin
+    container_name: investory-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@rule1.com}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@investory.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
@@ -93,7 +93,7 @@ services:
     depends_on:
       - db
     networks:
-      - rule1-network
+      - investory-network
     profiles:
       - tools
 
@@ -102,5 +102,5 @@ volumes:
     driver: local
 
 networks:
-  rule1-network:
+  investory-network:
     driver: bridge
