@@ -1,6 +1,6 @@
 # PostgreSQL Database Setup Guide
 
-This guide will help you set up PostgreSQL for the Rule #1 Investing Platform.
+This guide will help you set up PostgreSQL for the Investory.
 
 ## Quick Start
 
@@ -9,9 +9,9 @@ This guide will help you set up PostgreSQL for the Rule #1 Investing Platform.
 ```bash
 # Start PostgreSQL with Docker
 docker run -d \
-  --name rule1-postgres \
+  --name investory-postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=rule1_investing \
+  -e POSTGRES_DB=investory \
   -p 5432:5432 \
   -v rule1_data:/var/lib/postgresql/data \
   postgres:14-alpine
@@ -32,7 +32,7 @@ brew install postgresql@14
 brew services start postgresql@14
 
 # Create database
-createdb rule1_investing
+createdb investory
 
 # Initialize tables
 cd backend
@@ -50,12 +50,12 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
 # Create database and user
-sudo -u postgres psql -c "CREATE DATABASE rule1_investing;"
+sudo -u postgres psql -c "CREATE DATABASE investory;"
 sudo -u postgres psql -c "CREATE USER rule1user WITH PASSWORD 'your_password';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE rule1_investing TO rule1user;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE investory TO rule1user;"
 
 # Update .env with your credentials
-# DATABASE_URL=postgresql://rule1user:your_password@localhost:5432/rule1_investing
+# DATABASE_URL=postgresql://rule1user:your_password@localhost:5432/investory
 
 # Initialize tables
 cd backend
@@ -67,7 +67,7 @@ python init_db.py
 # Download and install PostgreSQL from:
 # https://www.postgresql.org/download/windows/
 
-# After installation, open pgAdmin4 and create a database named 'rule1_investing'
+# After installation, open pgAdmin4 and create a database named 'investory'
 
 # Update .env with your credentials
 # Then initialize tables:
@@ -81,10 +81,10 @@ Create or update `.env` file in the `backend` directory:
 
 ```env
 # Database Configuration
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/rule1_investing
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/investory
 
 # For production, use a more secure password:
-# DATABASE_URL=postgresql://username:securepassword@hostname:5432/rule1_investing
+# DATABASE_URL=postgresql://username:securepassword@hostname:5432/investory
 
 # Alpha Vantage API Key
 ALPHA_VANTAGE_KEY=your_api_key_here
@@ -181,7 +181,7 @@ init_db()  # Create tables fresh
 ### View Database Contents
 ```bash
 # Using psql command line
-psql -d rule1_investing
+psql -d investory
 
 # List all tables
 \dt
@@ -199,10 +199,10 @@ SELECT symbol, company_name, fetched_at, expires_at FROM stock_cache;
 ### Backup Database
 ```bash
 # Create backup
-pg_dump rule1_investing > backup_$(date +%Y%m%d).sql
+pg_dump investory > backup_$(date +%Y%m%d).sql
 
 # Restore from backup
-psql rule1_investing < backup_20240213.sql
+psql investory < backup_20240213.sql
 ```
 
 ## Migrations (Future)
@@ -276,7 +276,7 @@ brew services start postgresql@14
 sudo systemctl start postgresql
 
 # Docker
-docker start rule1-postgres
+docker start investory-postgres
 ```
 
 ### Permission denied
@@ -285,16 +285,16 @@ psycopg2.OperationalError: FATAL: permission denied for database
 ```
 **Solution:** Grant proper permissions
 ```sql
-GRANT ALL PRIVILEGES ON DATABASE rule1_investing TO your_user;
+GRANT ALL PRIVILEGES ON DATABASE investory TO your_user;
 ```
 
 ### Database doesn't exist
 ```
-psycopg2.OperationalError: database "rule1_investing" does not exist
+psycopg2.OperationalError: database "investory" does not exist
 ```
 **Solution:** Create the database
 ```bash
-createdb rule1_investing
+createdb investory
 ```
 
 ### Port already in use

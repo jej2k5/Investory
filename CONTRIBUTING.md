@@ -1,6 +1,6 @@
-# Contributing to Rule #1 Investing Platform
+# Contributing to Investory
 
-Thank you for considering contributing to the Rule #1 Investing Platform! This document provides guidelines and instructions for contributing.
+Thank you for considering contributing to the Investory! This document provides guidelines and instructions for contributing.
 
 ## 📋 Table of Contents
 
@@ -35,8 +35,8 @@ This project adheres to a Code of Conduct that all contributors are expected to 
 1. **Fork the repository**
    ```bash
    # Click "Fork" on GitHub, then clone your fork
-   git clone https://github.com/YOUR_USERNAME/rule1-app.git
-   cd rule1-app
+   git clone https://github.com/YOUR_USERNAME/investory.git
+   cd investory
    ```
 
 2. **Set up with Docker (Recommended)**
@@ -444,4 +444,4 @@ By contributing, you agree that your contributions will be licensed under the MI
 
 ---
 
-Thank you for contributing to Rule #1 Investing Platform! 🚀
+Thank you for contributing to Investory! 🚀

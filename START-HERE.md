@@ -1,4 +1,4 @@
-# Rule #1 Investing Platform - Quick Setup After Download
+# Investory - Quick Setup After Download
 
 ## 📥 You've Downloaded the Complete Project!
 
@@ -28,12 +28,12 @@ docker-compose up -d     # ❌ Old syntax
 
 ```bash
 # If you downloaded the .zip file:
-unzip rule1-app-complete.zip
-cd rule1-app
+unzip investory-complete.zip
+cd investory
 
 # If you downloaded the .tar.gz file:
-tar -xzf rule1-app.tar.gz
-cd rule1-app
+tar -xzf investory.tar.gz
+cd investory
 ```
 
 ### Step 2: Set Up Environment
@@ -83,7 +83,7 @@ npm run dev
 
 ### Core Application
 ```
-rule1-app/
+investory/
 ├── backend/           # FastAPI + PostgreSQL backend
 │   ├── main.py       # API server (622 lines)
 │   ├── models.py     # Database models
@@ -162,7 +162,7 @@ git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/rule1-app.git
+git remote add origin https://github.com/YOUR_USERNAME/investory.git
 git push -u origin main
 
 # GitHub Actions will automatically:
@@ -206,7 +206,7 @@ npm run dev
 # Database
 docker run -d --name postgres -p 5432:5432 \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=rule1_investing \
+  -e POSTGRES_DB=investory \
   postgres:14-alpine
 ```
 
@@ -342,9 +342,9 @@ docker compose up -d
 
 ## 🎉 You're All Set!
 
-The Rule #1 Investing Platform is ready to help you analyze stocks using Phil Town's proven methodology.
+Investory is ready to help you analyze stocks using Phil Town's proven methodology.
 
-**Remember:** Rule #1 - Don't lose money!
+**Invest smarter. Track what matters.**
 
 ---
 

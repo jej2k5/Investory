@@ -1,313 +1,315 @@
-# Rule #1 Investing Platform
+# Investory
 
-A modern, API-first web application for analyzing stocks using Phil Town's proven "Rule #1 Investing" methodology. Built with Python FastAPI backend, PostgreSQL database, and React frontend.
-
-![Rule #1 Investing](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-cyan)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue)
 ![React](https://img.shields.io/badge/react-18.2-purple)
+![Docker](https://img.shields.io/badge/docker-ready-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+**Invest smarter. Track what matters.**
+
+Investory is an open-source stock analysis platform built around Phil Town's Four Ms investing framework. Self-hostable, API-first, and Docker-ready.
+
+---
 
 ## 🎯 Overview
 
-This platform helps investors evaluate stocks using the Four Ms framework:
-- **Meaning**: Does the business have personal meaning to you?
-- **Moat**: Does it have a durable competitive advantage?
-- **Management**: Is leadership owner-oriented with integrity?
-- **Margin of Safety**: Can you buy it at 50% of intrinsic value?
+Investory helps investors evaluate stocks systematically using the proven Four Ms framework:
+
+- 🎯 **Meaning**: Does the business have personal meaning to you?
+- 🏰 **Moat**: Does it have a durable competitive advantage?
+- 👔 **Management**: Is leadership owner-oriented with integrity?
+- 💰 **Margin of Safety**: Can you buy it at 50% of intrinsic value?
+
+Combined with automated financial analysis, growth rate calculations, and valuation tools, Investory makes fundamental analysis accessible and systematic.
+
+---
+
+## ✨ Features
+
+**Backend (FastAPI + PostgreSQL)**
+- RESTful API with automatic OpenAPI documentation
+- PostgreSQL database for persistent storage
+- Alpha Vantage integration with 1-hour caching
+- Automated growth rate calculations (10-year CAGR)
+- Valuation engine (Sticker Price & Margin of Safety)
+- Four Ms scoring and recommendation system
+- Watchlist management with price alerts
+
+**Frontend (React + Tailwind CSS)**
+- Modern, responsive UI with dark mode
+- Real-time stock search and analysis
+- Interactive Four Ms evaluation interface
+- Visual growth rate charts and metrics
+- Watchlist dashboard with tracking
+- Framer Motion animations
+
+**DevOps & Infrastructure**
+- Docker Compose for local development
+- Production-ready multi-container setup
+- Nginx reverse proxy configuration
+- Health checks and graceful shutdowns
+- Database migration scripts
+
+---
 
 ## 🏗️ Architecture
 
 ```
-rule1-app/
-├── backend/           # Python FastAPI REST API + PostgreSQL
-│   ├── main.py       # API server with all endpoints
-│   ├── models.py     # SQLAlchemy database models
-│   ├── database.py   # Database configuration
-│   ├── schemas.py    # Pydantic request/response schemas
-│   ├── init_db.py    # Database initialization script
+investory/
+├── backend/              # Python FastAPI REST API
+│   ├── main.py          # API server with all endpoints
+│   ├── models.py        # SQLAlchemy database models
+│   ├── database.py      # Database configuration
+│   ├── schemas.py       # Pydantic request/response schemas
+│   ├── init_db.py       # Database initialization
 │   ├── requirements.txt
 │   └── .env.example
-├── frontend/          # React + Tailwind + Framer Motion
-│   ├── App.jsx       # Main application component
-│   ├── main.jsx      # React entry point
+├── frontend/            # React + Vite + Tailwind CSS
+│   ├── src/
+│   │   ├── App.jsx     # Main application component
+│   │   └── main.jsx    # React entry point
 │   ├── package.json
 │   └── vite.config.js
-└── docs/             # Documentation
-    ├── API.md        # API reference
-    ├── DATABASE.md   # PostgreSQL setup guide
-    └── DEPLOYMENT.md # Production deployment
+├── docs/                # Documentation
+│   ├── API.md          # API reference
+│   ├── DATABASE.md     # Database schema
+│   ├── DEPLOYMENT.md   # Production deployment guide
+│   └── DOCKER.md       # Docker usage
+├── compose.yml         # Development Docker Compose
+├── compose.prod.yml    # Production Docker Compose
+└── Makefile            # Common commands
 ```
 
-## ✨ Features
-
-### Backend (FastAPI + PostgreSQL)
-- **RESTful API** with automatic OpenAPI documentation
-- **PostgreSQL Database** for persistent storage
-- **Stock Data Aggregation** from Alpha Vantage
-- **Database Caching** (1-hour TTL for stock data)
-- **Growth Rate Calculations** (10-year CAGR for Big Five metrics)
-- **Valuation Engine** (Sticker Price & Margin of Safety)
-- **Moat Evaluation** (automated assessment)
-- **Analysis Management** (CRUD operations with history)
-- **Watchlist Feature** (track stocks with target prices)
-- **Statistics & Analytics** (analysis trends and insights)
-- **CORS Support** (seamless frontend integration)
-
-### Frontend (React)
-- **Modern UI/UX** with Framer Motion animations
-- **Distinctive Design** avoiding generic AI aesthetics
-- **Real-time Stock Search**
-- **Interactive Four Ms Scoring**
-- **Visual Growth Rate Analysis**
-- **Automatic Valuation Calculations**
-- **Responsive Design** (mobile-friendly)
-
-## 🚀 Quick Start
-
-### Option 1: Docker (Recommended) 🐳
-
-The fastest way to get started:
-
-```bash
-# 1. Copy environment file
-cp .env.example .env
-
-# 2. Add your Alpha Vantage API key to .env
-nano .env
-
-# 3. Start everything!
-docker compose up -d
-
-# 4. Access the application
-# Frontend: http://localhost:3000
-# API Docs: http://localhost:8000/api/docs
+**System Architecture:**
 ```
-
-See [DOCKER-README.md](DOCKER-README.md) for details.
-
-### Option 2: Manual Setup
-
-#### Prerequisites
-- Python 3.9+
-- PostgreSQL 14+
-- Node.js 18+
-- Alpha Vantage API key (free at https://www.alphavantage.co/support/#api-key)
-
-### Database Setup
-
-**Option 1: Docker (Recommended)**
-```bash
-docker run -d \
-  --name rule1-postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=rule1_investing \
-  -p 5432:5432 \
-  postgres:14-alpine
+┌─────────────┐      ┌──────────────┐      ┌───────────────┐
+│   React     │─────▶│   FastAPI    │─────▶│  PostgreSQL   │
+│  Frontend   │      │   Backend    │      │   Database    │
+└─────────────┘      └──────────────┘      └───────────────┘
+                            │
+                            ▼
+                     ┌──────────────┐
+                     │ Alpha Vantage│
+                     │     API      │
+                     └──────────────┘
 ```
-
-**Option 2: Local PostgreSQL**
-```bash
-# macOS
-brew install postgresql@14
-brew services start postgresql@14
-createdb rule1_investing
-
-# Ubuntu/Debian
-sudo apt install postgresql
-sudo systemctl start postgresql
-sudo -u postgres createdb rule1_investing
-```
-
-See [docs/DATABASE.md](docs/DATABASE.md) for detailed setup instructions.
-
-### Backend Setup
-
-1. Navigate to backend directory:
-```bash
-cd backend
-```
-
-2. Create virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Configure environment:
-```bash
-cp .env.example .env
-# Edit .env and add your credentials:
-# - ALPHA_VANTAGE_KEY=your_api_key_here
-# - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/rule1_investing
-```
-
-5. Initialize database:
-```bash
-python init_db.py
-```
-
-6. Start the server:
-```bash
-python main.py
-```
-
-The API will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Navigate to frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start development server:
-```bash
-npm run dev
-```
-
-The app will be available at `http://localhost:3000`
-
-## 📚 API Documentation
-
-Once the backend is running, visit:
-- **Swagger UI**: http://localhost:8000/api/docs
-- **ReDoc**: http://localhost:8000/api/redoc
-
-See [docs/API.md](docs/API.md) for complete API reference.
-
-## 🗄️ Database Schema
-
-### Tables
-- **users**: User accounts (for future auth)
-- **analyses**: Stock analyses with Four Ms scores
-- **watchlists**: User watchlist with target prices
-- **stock_cache**: Cached stock data (1-hour TTL)
-- **api_usage**: API usage tracking
-
-See [docs/DATABASE.md](docs/DATABASE.md) for detailed schema documentation.
-
-## 🔧 Technology Stack
-
-### Backend
-- **FastAPI**: Modern, fast web framework
-- **SQLAlchemy**: SQL toolkit and ORM
-- **PostgreSQL**: Robust relational database
-- **Pydantic**: Data validation using type hints
-- **httpx**: Async HTTP client
-- **Uvicorn**: ASGI server
-
-### Frontend
-- **React 18**: UI library with hooks
-- **Vite**: Next-generation frontend tooling
-- **Tailwind CSS**: Utility-first CSS framework
-- **Framer Motion**: Production-ready animation library
-- **Lucide React**: Beautiful icon set
-
-## 📊 Key Features Explained
-
-### Stock Data Caching
-Stock data is cached in PostgreSQL with a 1-hour TTL to:
-- Reduce API calls to Alpha Vantage
-- Improve response times
-- Stay within free tier rate limits
-
-### Analysis History
-All analyses are saved to the database with:
-- Four Ms scores
-- Financial metrics snapshot
-- Growth rates at time of analysis
-- Calculated recommendations
-- User notes
-
-### Watchlist
-Track stocks you're interested in:
-- Set target buy/sell prices
-- Enable price alerts
-- Add personal notes
-- View all watched stocks
-
-## 🚀 Production Deployment
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for:
-- Docker deployment
-- PostgreSQL configuration
-- SSL setup
-- Monitoring & logging
-- Backup strategies
-
-## 🔐 Environment Variables
-
-### Backend (.env)
-```env
-ALPHA_VANTAGE_KEY=your_api_key_here
-DATABASE_URL=postgresql://user:password@localhost:5432/rule1_investing
-API_HOST=0.0.0.0
-API_PORT=8000
-```
-
-## 📈 Future Enhancements
-
-- [ ] User authentication & authorization (JWT)
-- [ ] Email price alerts
-- [ ] Portfolio tracking
-- [ ] Additional data sources (Yahoo Finance, IEX)
-- [ ] Technical analysis charts
-- [ ] PDF report generation
-- [ ] Mobile app (React Native)
-- [ ] Real-time price updates (WebSockets)
-- [ ] Social features (share analyses)
-
-## 🧪 Testing
-
-### Backend Tests
-```bash
-cd backend
-pytest
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm test
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🙏 Acknowledgments
-
-- Phil Town for the Rule #1 Investing methodology
-- Alpha Vantage for financial data API
-- The FastAPI, React, and PostgreSQL communities
-
-## 📧 Support
-
-For questions or issues:
-- Open a GitHub issue
-- Check [docs/](docs/) for detailed guides
-- Review API documentation at `/api/docs`
 
 ---
 
-**Remember**: Rule #1 - Don't lose money. Rule #2 - Don't forget Rule #1.
+## 🚀 Quick Start
+
+Get Investory running in under 60 seconds:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/investory.git
+cd investory
+
+# Copy environment file
+cp .env.example .env
+
+# Edit .env and add your Alpha Vantage API key (get one free at https://www.alphavantage.co)
+
+# Start all services with Docker Compose
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+Access the application:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/api/docs
+
+---
+
+## 📦 Local Development Setup
+
+### Prerequisites
+
+- **Docker** (20.10+) and **Docker Compose** (2.0+)
+- **Git**
+- **Alpha Vantage API Key** (free at https://www.alphavantage.co/support/#api-key)
+
+### Step-by-Step Installation
+
+1. **Clone and navigate to the project:**
+   ```bash
+   git clone https://github.com/yourusername/investory.git
+   cd investory
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env
+   # Edit .env and set your ALPHA_VANTAGE_KEY
+   ```
+
+3. **Build and start services:**
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. **Initialize the database (first time only):**
+   ```bash
+   docker compose exec backend python init_db.py
+   ```
+
+5. **Verify installation:**
+   ```bash
+   curl http://localhost:8000/
+   # Should return: {"status":"healthy","service":"Investory API",...}
+   ```
+
+### Development Workflow
+
+```bash
+# Start services
+make up
+
+# View logs
+make logs
+
+# Restart a service
+make restart-backend
+
+# Stop services
+make down
+
+# Run backend tests
+make test-backend
+
+# Access database shell
+make shell-db
+```
+
+See the `Makefile` for all available commands.
+
+---
+
+## 📖 API Documentation
+
+Interactive API documentation is available at:
+- **Swagger UI**: http://localhost:8000/api/docs
+- **ReDoc**: http://localhost:8000/api/redoc
+
+Key endpoints:
+- `GET /api/stocks/{symbol}` - Fetch stock data with growth rates
+- `POST /api/valuation` - Calculate Sticker Price and MOS
+- `POST /api/analyses` - Save Four Ms analysis
+- `GET /api/analyses` - List saved analyses
+- `POST /api/watchlist` - Add stock to watchlist
+- `GET /api/watchlist` - Get all watchlist items
+
+For detailed API documentation, see [docs/API.md](docs/API.md).
+
+---
+
+## 🗄️ Database
+
+Investory uses PostgreSQL 14+ with the following tables:
+
+- **users** - User accounts (future auth integration)
+- **analyses** - Saved stock analyses with Four Ms scores
+- **watchlist** - User watchlist with price alerts
+- **stock_cache** - Cached Alpha Vantage API responses (1-hour TTL)
+- **api_usage** - API call tracking and rate limiting
+
+See [docs/DATABASE.md](docs/DATABASE.md) for schema details.
+
+---
+
+## 🚢 Production Deployment
+
+Deploy Investory to production using the included production Docker Compose configuration:
+
+```bash
+# Use production compose file
+docker compose -f compose.prod.yml up -d
+```
+
+Production features:
+- Nginx reverse proxy with SSL support
+- Multi-worker FastAPI backend
+- Persistent volumes for database
+- Health checks and auto-restart
+- Optimized build for frontend
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions including:
+- VPS/cloud deployment
+- SSL certificate setup
+- Environment variable configuration
+- Backup and restore procedures
+
+---
+
+## 🗺️ Roadmap
+
+**v1.1 - Authentication & Multi-User**
+- User authentication with JWT
+- Per-user watchlists and analyses
+- User preferences and settings
+
+**v1.2 - Advanced Features**
+- Portfolio tracking and performance
+- Historical price charts
+- Dividend tracking
+- Real-time price alerts via email/webhook
+
+**v1.3 - Enhanced Analysis**
+- Industry comparison tools
+- Competitor analysis
+- Financial statement visualization
+- Custom valuation models
+
+**v2.0 - Platform Expansion**
+- Mobile app (React Native)
+- CSV/Excel import/export
+- Integration with brokers (Alpaca, Interactive Brokers)
+- Community-shared analyses
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Whether it's:
+
+- 🐛 Bug reports and fixes
+- ✨ New features and enhancements
+- 📖 Documentation improvements
+- 🧪 Test coverage expansion
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+**Good First Issues**: Check out issues tagged with `good-first-issue` to get started!
+
+---
+
+## 📄 License
+
+Investory is open-source software licensed under the [MIT License](LICENSE).
+
+---
+
+## 🙏 Acknowledgments
+
+- **Phil Town** - For the Four Ms investing framework
+- **Alpha Vantage** - For providing free stock market data API
+- **FastAPI** - For the excellent Python web framework
+- **React** - For the powerful frontend library
+
+---
+
+## 📞 Support
+
+- **Documentation**: See the `/docs` folder
+- **Issues**: https://github.com/yourusername/investory/issues
+- **Discussions**: https://github.com/yourusername/investory/discussions
+
+---
+
+**Built with ❤️ by the open-source community**

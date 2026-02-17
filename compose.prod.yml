@@ -7,7 +7,7 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:14-alpine
-    container_name: rule1-postgres-prod
+    container_name: investory-postgres-prod
     restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -21,14 +21,14 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - rule1-network
+      - investory-network
 
   # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: rule1-backend-prod
+    container_name: investory-backend-prod
     restart: always
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
@@ -47,7 +47,7 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - rule1-network
+      - investory-network
     command: >
       sh -c "
         python init_db.py || true &&
@@ -61,7 +61,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=${API_URL:-http://localhost:8000}
-    container_name: rule1-frontend-prod
+    container_name: investory-frontend-prod
     restart: always
     expose:
       - "80"
@@ -73,12 +73,12 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - rule1-network
+      - investory-network
 
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
-    container_name: rule1-nginx-prod
+    container_name: investory-nginx-prod
     restart: always
     ports:
       - "80:80"
@@ -97,7 +97,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - rule1-network
+      - investory-network
 
 volumes:
   postgres_data:
@@ -106,5 +106,5 @@ volumes:
     driver: local
 
 networks:
-  rule1-network:
+  investory-network:
     driver: bridge

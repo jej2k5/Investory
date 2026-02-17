@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Rule #1 Investing Platform - Quick Start Script
+# Investory - Quick Start Script
 # This script sets up both backend and frontend for development
 
 set -e
 
-echo "🚀 Rule #1 Investing Platform - Quick Start"
+echo "🚀 Investory - Quick Start"
 echo "============================================"
 echo ""
 

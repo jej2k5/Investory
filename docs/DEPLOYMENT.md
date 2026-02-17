@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying the Rule #1 Investing Platform to production.
+This guide covers deploying the Investory to production.
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)
@@ -33,7 +33,7 @@ services:
       - "8000:8000"
     environment:
       - ALPHA_VANTAGE_KEY=${ALPHA_VANTAGE_KEY}
-      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/rule1_investing
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/investory
     depends_on:
       - db
     restart: unless-stopped
@@ -51,7 +51,7 @@ services:
   db:
     image: postgres:14-alpine
     environment:
-      - POSTGRES_DB=rule1_investing
+      - POSTGRES_DB=investory
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -137,8 +137,8 @@ sudo apt update
 sudo apt install python3-pip python3-venv nginx
 
 # Clone your repo
-git clone https://github.com/yourusername/rule1-app.git
-cd rule1-app/backend
+git clone https://github.com/yourusername/investory.git
+cd investory/backend
 
 # Create virtual environment
 python3 -m venv venv
@@ -157,8 +157,8 @@ sudo nano /etc/supervisor/conf.d/rule1-api.conf
 Supervisor config:
 ```ini
 [program:rule1-api]
-directory=/home/ubuntu/rule1-app/backend
-command=/home/ubuntu/rule1-app/backend/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+directory=/home/ubuntu/investory/backend
+command=/home/ubuntu/investory/backend/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 user=ubuntu
 autostart=true
 autorestart=true
@@ -277,7 +277,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ALPHA_VANTAGE_KEY=your_production_key
 
 # Database
-DATABASE_URL=postgresql://user:password@host:5432/rule1_investing
+DATABASE_URL=postgresql://user:password@host:5432/investory
 
 # Security
 SECRET_KEY=your_very_secret_key_here
@@ -460,7 +460,7 @@ export default defineConfig({
 #!/bin/bash
 BACKUP_DIR="/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
-pg_dump -U postgres rule1_investing > "$BACKUP_DIR/backup_$DATE.sql"
+pg_dump -U postgres investory > "$BACKUP_DIR/backup_$DATE.sql"
 
 # Keep only last 30 days
 find $BACKUP_DIR -name "backup_*.sql" -mtime +30 -delete

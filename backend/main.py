@@ -1,5 +1,5 @@
 """
-Rule #1 Investing API - FastAPI Backend
+Investory API - FastAPI Backend
 Modern, API-first architecture for stock analysis with PostgreSQL
 """
 
@@ -37,7 +37,7 @@ from schemas import (
 
 load_dotenv()
 
-logger = logging.getLogger("rule1_api")
+logger = logging.getLogger("investory_api")
 if not logger.handlers:
     logging.basicConfig(
         level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -52,9 +52,9 @@ except Exception as e:
     print(f"⚠️  Database initialization warning: {e}")
 
 app = FastAPI(
-    title="Rule #1 Investing API",
-    description="API for analyzing stocks using Phil Town's Four Ms framework with PostgreSQL storage",
-    version="2.0.0",
+    title="Investory API",
+    description="Stock analysis API powered by Phil Town's Four Ms framework. Open source and self-hostable.",
+    version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
 )
@@ -185,7 +185,7 @@ def calculate_growth_rates(income_data: List[dict], balance_data: List[dict], ca
 
 
 def calculate_sticker_price(current_eps: float, growth_rate: float, pe_ratio: float) -> float:
-    """Calculate intrinsic value (Sticker Price) using Rule #1 formula"""
+    """Calculate intrinsic value (Sticker Price) using Phil Town's formula"""
     try:
         future_eps = current_eps * ((1 + growth_rate / 100) ** 10)
         future_price = future_eps * pe_ratio
@@ -225,8 +225,8 @@ async def root():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "Rule #1 Investing API",
-        "version": "2.0.0",
+        "service": "Investory API",
+        "version": "1.0.0",
         "database": "PostgreSQL",
         "timestamp": datetime.utcnow().isoformat(),
     }
@@ -413,7 +413,7 @@ async def calculate_valuation(valuation: ValuationInput, current_price: float = 
     """
     Calculate Sticker Price and Margin of Safety price.
 
-    Uses Phil Town's Rule #1 formula to determine intrinsic value.
+    Uses Phil Town's valuation formula to determine intrinsic value.
     """
     try:
         sticker = calculate_sticker_price(valuation.current_eps, valuation.growth_rate, valuation.pe_ratio)

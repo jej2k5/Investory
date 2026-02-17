@@ -1,6 +1,6 @@
 # 🐳 Docker Quick Start
 
-Run the entire Rule #1 Investing Platform with one command!
+Run the entire Investory with one command!
 
 ## Prerequisites
 
@@ -85,10 +85,10 @@ docker compose restart backend
 docker compose ps
 
 # Access database shell
-docker compose exec db psql -U postgres -d rule1_investing
+docker compose exec db psql -U postgres -d investory
 
 # Backup database
-docker compose exec db pg_dump -U postgres rule1_investing > backup.sql
+docker compose exec db pg_dump -U postgres investory > backup.sql
 ```
 
 ## Configuration

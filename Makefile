@@ -1,4 +1,4 @@
-# Makefile for Rule #1 Investing Platform
+# Makefile for Investory
 # Simplifies common Docker operations
 
 .PHONY: help build up down restart logs shell-backend shell-frontend shell-db clean backup restore test
@@ -14,7 +14,7 @@ RED := \033[0;31m
 NC := \033[0m # No Color
 
 help: ## Show this help message
-	@echo "$(BLUE)Rule #1 Investing Platform - Docker Commands$(NC)"
+	@echo "$(BLUE)Investory - Docker Commands$(NC)"
 	@echo ""
 	@echo "$(GREEN)Usage:$(NC) make [target]"
 	@echo ""
@@ -133,7 +133,7 @@ shell-frontend: ## Open shell in frontend container
 
 shell-db: ## Open PostgreSQL shell
 	@echo "$(BLUE)Opening PostgreSQL shell...$(NC)"
-	docker compose exec db psql -U postgres -d rule1_investing
+	docker compose exec db psql -U postgres -d investory
 
 # Database Operations
 db-init: ## Initialize database tables
@@ -144,7 +144,7 @@ db-init: ## Initialize database tables
 db-backup: ## Backup database to backups/ directory
 	@echo "$(GREEN)Creating database backup...$(NC)"
 	@mkdir -p backups
-	docker compose exec -T db pg_dump -U postgres rule1_investing > "backups/backup_$$(date +%Y%m%d_%H%M%S).sql"
+	docker compose exec -T db pg_dump -U postgres investory > "backups/backup_$$(date +%Y%m%d_%H%M%S).sql"
 	@echo "$(GREEN)✓ Backup created in backups/ directory$(NC)"
 
 db-restore: ## Restore database from backup (specify FILE=path/to/backup.sql)
@@ -153,7 +153,7 @@ db-restore: ## Restore database from backup (specify FILE=path/to/backup.sql)
 		exit 1; \
 	fi
 	@echo "$(YELLOW)Restoring database from $(FILE)...$(NC)"
-	@cat $(FILE) | docker compose exec -T db psql -U postgres -d rule1_investing
+	@cat $(FILE) | docker compose exec -T db psql -U postgres -d investory
 	@echo "$(GREEN)✓ Database restored!$(NC)"
 
 db-reset: ## Reset database (⚠️ deletes all data!)

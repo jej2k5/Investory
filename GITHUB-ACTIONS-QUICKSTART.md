@@ -12,7 +12,7 @@
 
 3. **Configure Container Registry**
    - Go to Settings → Packages
-   - Images will automatically push to `ghcr.io/YOUR_USERNAME/rule1-app`
+   - Images will automatically push to `ghcr.io/YOUR_USERNAME/investory`
 
 4. **No secrets required!** 
    - GitHub Actions works out of the box
@@ -44,16 +44,16 @@ After pushing to GitHub, your images are available at:
 
 ```bash
 # Latest images
-docker pull ghcr.io/YOUR_USERNAME/rule1-app/backend:latest
-docker pull ghcr.io/YOUR_USERNAME/rule1-app/frontend:latest
+docker pull ghcr.io/YOUR_USERNAME/investory/backend:latest
+docker pull ghcr.io/YOUR_USERNAME/investory/frontend:latest
 
 # Specific version
-docker pull ghcr.io/YOUR_USERNAME/rule1-app/backend:v1.0.0
+docker pull ghcr.io/YOUR_USERNAME/investory/backend:v1.0.0
 
 # Use in docker compose.yml
 services:
   backend:
-    image: ghcr.io/YOUR_USERNAME/rule1-app/backend:latest
+    image: ghcr.io/YOUR_USERNAME/investory/backend:latest
 ```
 
 ### Make Images Public
@@ -159,8 +159,8 @@ pytest
 Add to your README.md:
 
 ```markdown
-![CI](https://github.com/YOUR_USERNAME/rule1-app/workflows/CI%2FCD%20Pipeline/badge.svg)
-![Docker Build](https://github.com/YOUR_USERNAME/rule1-app/workflows/Build%20and%20Push%20Docker%20Images/badge.svg)
+![CI](https://github.com/YOUR_USERNAME/investory/workflows/CI%2FCD%20Pipeline/badge.svg)
+![Docker Build](https://github.com/YOUR_USERNAME/investory/workflows/Build%20and%20Push%20Docker%20Images/badge.svg)
 ```
 
 Replace `YOUR_USERNAME` with your GitHub username.
