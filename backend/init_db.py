@@ -11,8 +11,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
 
-from database import DATABASE_URL, drop_db, init_db
+from database import DATABASE_URL, SessionLocal, drop_db, init_db
+from models import User
+from auth import hash_password
 
 
 def create_database():
@@ -50,6 +53,51 @@ def create_database():
         sys.exit(1)
 
 
+def create_default_admin():
+    """Create default admin user if it doesn't exist"""
+    print()
+    print("Setting up default admin user...")
+
+    db = SessionLocal()
+    try:
+        # Check if admin user already exists
+        existing_admin = db.query(User).filter(User.username == "admin").first()
+
+        if existing_admin:
+            print("✅ Admin user already exists")
+        else:
+            # Create default admin user
+            admin_user = User(
+                username="admin",
+                email="admin@investory.local",
+                hashed_password=hash_password("admin123"),
+                full_name="Administrator",
+                role="admin",
+                requires_password_change=True,  # Force password change on first login
+                is_active=True
+            )
+
+            db.add(admin_user)
+            db.commit()
+
+            print("✅ Default admin user created")
+            print()
+            print("=" * 60)
+            print("⚠️  IMPORTANT: Default Admin Credentials")
+            print("=" * 60)
+            print("  Username: admin")
+            print("  Password: admin123")
+            print()
+            print("  ⚠️  You MUST change this password on first login!")
+            print("=" * 60)
+
+    except Exception as e:
+        print(f"❌ Error creating admin user: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def main():
     """Main initialization function"""
     print("=" * 60)
@@ -83,6 +131,11 @@ def main():
         print("  - watchlists")
         print("  - stock_cache")
         print("  - api_usage")
+        print()
+
+        # Create default admin user
+        create_default_admin()
+
         print()
         print("You can now start the API server with:")
         print("  python main.py")

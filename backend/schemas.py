@@ -7,25 +7,56 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, validator
 
+# ==================== AUTHENTICATION SCHEMAS ====================
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    requires_password_change: bool = False
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+class UserRegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+    password: str = Field(..., min_length=8)
+    full_name: Optional[str] = None
+    role: str = Field(default="user", pattern="^(admin|user)$")
+
+
 # ==================== USER SCHEMAS ====================
 
 
 class UserBase(BaseModel):
-    email: EmailStr
+    username: str
+    email: Optional[EmailStr] = None
     full_name: Optional[str] = None
 
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
+    role: str = Field(default="user", pattern="^(admin|user)$")
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    username: str
     password: str
 
 
 class UserResponse(UserBase):
     id: int
+    role: str
+    requires_password_change: bool
     created_at: datetime
     last_login: Optional[datetime] = None
     is_active: bool
