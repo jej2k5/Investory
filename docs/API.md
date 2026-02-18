@@ -21,6 +21,11 @@ Watchlist endpoints are authenticated and always scoped to the currently authent
   - Free tier: 5 requests/minute, 500 requests/day
   - Caching reduces external API calls significantly
 
+
+## MCP Integration
+
+For agent-platform integrations, use the MCP service documented in [`docs/MCP.md`](./MCP.md). It exposes stock metrics, valuation, moat evaluation, and user-scoped watchlist workflows over MCP-compatible JSON-RPC transports.
+
 ## Endpoints
 
 ### Health Check
