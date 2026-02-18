@@ -37,6 +37,8 @@ Then connect MCP clients to:
 
 Compose config now uses `INVESTORY_API_BASE_URL` for MCP service API targeting (default: `http://backend:8000`) instead of DB connection variables.
 
+The MCP service proxies to the backend API and does not connect to the database directly.
+
 ## Architecture note: API layer vs direct DB
 
 The MCP server should use the same API/domain layer functions as REST endpoints for business operations (especially watchlist ownership checks), instead of duplicating DB CRUD logic in MCP handlers. This keeps behavior consistent across REST and MCP and reduces permission drift risk.
@@ -47,9 +49,9 @@ Watchlist tools/resources enforce user ownership and require an authenticated us
 
 1. **Token passthrough** (recommended)
    - Pass the API bearer token as `auth_token` in MCP tool arguments/resource params.
-2. **Service account fallback**
-   - Configure `MCP_SERVICE_ACCOUNT_USERNAME` in environment.
-   - If no token is provided, MCP acts as that active user.
+2. **Service token fallback**
+   - Configure `MCP_SERVICE_AUTH_TOKEN` in environment.
+   - If no token is provided per call, MCP uses this bearer token for watchlist calls.
 
 > Note: stock metrics, valuation, and moat evaluation tools are read-only and do not require auth.
 

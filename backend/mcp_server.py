@@ -1,11 +1,12 @@
 """Investory MCP service.
 
-This module exposes a lightweight MCP-compatible interface over:
-- stdio (JSON-RPC line-delimited messages)
-- HTTP POST /mcp (JSON-RPC request/response)
+This module exposes an MCP-compatible JSON-RPC interface over:
+- stdio (line-delimited JSON-RPC)
+- HTTP POST /mcp
 
-It reuses existing Pydantic schemas and business logic from the FastAPI API to keep
-contracts aligned and avoid duplicate validation rules.
+Implementation note:
+- MCP handlers call the Investory REST API via INVESTORY_API_BASE_URL.
+- MCP does not import backend.main or connect to the database directly.
 """
 
 from __future__ import annotations
@@ -94,8 +95,9 @@ class InvestoryMCPService:
     TOOL_WATCHLIST_UPDATE = "investory.watchlist.update"
     TOOL_WATCHLIST_DELETE = "investory.watchlist.delete"
 
-    def __init__(self, db_session_factory: sessionmaker = SessionLocal):
-        self.db_session_factory = db_session_factory
+    def __init__(self, api_base_url: Optional[str] = None):
+        self.api_base_url = (api_base_url or os.getenv("INVESTORY_API_BASE_URL", "http://localhost:8000")).rstrip("/")
+        self.service_auth_token = os.getenv("MCP_SERVICE_AUTH_TOKEN")
         self.tools = {
             self.TOOL_FETCH_STOCK_METRICS: MCPTool(
                 name=self.TOOL_FETCH_STOCK_METRICS,
@@ -163,58 +165,52 @@ class InvestoryMCPService:
             raise HTTPException(status_code=404, detail=f"Unknown tool: {name}")
 
         envelope = ToolEnvelope.model_validate(arguments)
-        auth_token = envelope.auth_token
         tool = self.tools[name]
 
         filtered_args = dict(arguments)
         filtered_args.pop("auth_token", None)
         payload = tool.input_model.model_validate(filtered_args)
 
-        with self.db_session_factory() as db:
-            current_user = self._resolve_user(db, auth_token)
+        if name == self.TOOL_FETCH_STOCK_METRICS:
+            return await self._api_request("GET", f"/api/stocks/{payload.symbol}")
 
-            if name == self.TOOL_FETCH_STOCK_METRICS:
-                result = await get_stock_data(payload.symbol, db)  # type: ignore[arg-type]
-                return result.model_dump(mode="json")
+        if name == self.TOOL_CALCULATE_VALUATION:
+            if "current_price" not in arguments:
+                raise HTTPException(status_code=422, detail="current_price is required")
+            return await self._api_request(
+                "POST",
+                "/api/valuation",
+                params={"current_price": float(arguments["current_price"])},
+                json_body=payload.model_dump(mode="json"),
+            )
 
-            if name == self.TOOL_CALCULATE_VALUATION:
-                if "current_price" not in arguments:
-                    raise HTTPException(status_code=422, detail="current_price is required")
-                current_price = float(arguments["current_price"])
-                result = await calculate_valuation(payload, current_price=current_price)
-                return result.model_dump(mode="json")
+        if name == self.TOOL_EVALUATE_MOAT:
+            return await self._api_request("GET", "/api/moat/evaluate", params=payload.model_dump(mode="json"))
 
-            if name == self.TOOL_EVALUATE_MOAT:
-                result = await evaluate_moat(**payload.model_dump())
-                return result.model_dump(mode="json")
+        auth_token = self._resolve_auth_token(envelope.auth_token)
+        headers = self._auth_headers(auth_token)
 
-            if current_user is None:
-                raise HTTPException(status_code=401, detail="Authentication required for watchlist tools")
+        if name == self.TOOL_WATCHLIST_LIST:
+            data = await self._api_request(
+                "GET",
+                "/api/watchlist",
+                params={"limit": payload.limit, "skip": payload.skip},
+                headers=headers,
+            )
+            return {"items": data}
 
-            if name == self.TOOL_WATCHLIST_LIST:
-                items = await list_watchlist(
-                    limit=payload.limit,
-                    skip=payload.skip,
-                    current_user=current_user,
-                    db=db,
-                )
-                return {"items": [item.model_dump(mode="json") for item in items]}
+        if name == self.TOOL_WATCHLIST_CREATE:
+            return await self._api_request("POST", "/api/watchlist", json_body=payload.model_dump(mode="json"), headers=headers)
 
-            if name == self.TOOL_WATCHLIST_CREATE:
-                created = await create_watchlist_item(payload, current_user=current_user, db=db)
-                return created.model_dump(mode="json")
+        if name == self.TOOL_WATCHLIST_UPDATE:
+            return await self._api_request(
+                "PUT",
+                f"/api/watchlist/{payload.item_id}",
+                json_body=payload.payload.model_dump(exclude_none=True, mode="json"),
+                headers=headers,
+            )
 
-            if name == self.TOOL_WATCHLIST_UPDATE:
-                updated = await update_watchlist_item(
-                    payload.item_id,
-                    payload.payload,
-                    current_user=current_user,
-                    db=db,
-                )
-                return updated.model_dump(mode="json")
-
-            deleted = await delete_watchlist_item(payload.item_id, current_user=current_user, db=db)
-            return dict(deleted)
+        return await self._api_request("DELETE", f"/api/watchlist/{payload.item_id}", headers=headers)
 
     async def read_resource(self, uri: str, params: Dict[str, Any]) -> Dict[str, Any]:
         if uri == "investory://schemas/tools":
@@ -222,30 +218,48 @@ class InvestoryMCPService:
 
         if uri == "investory://watchlist":
             args = ToolEnvelope.model_validate(params)
-            with self.db_session_factory() as db:
-                current_user = self._resolve_user(db, args.auth_token)
-                if current_user is None:
-                    raise HTTPException(status_code=401, detail="Authentication required")
-
-                items = await list_watchlist(limit=100, skip=0, current_user=current_user, db=db)
-                return {"items": [item.model_dump(mode="json") for item in items]}
+            auth_token = self._resolve_auth_token(args.auth_token)
+            items = await self._api_request("GET", "/api/watchlist", params={"limit": 100, "skip": 0}, headers=self._auth_headers(auth_token))
+            return {"items": items}
 
         raise HTTPException(status_code=404, detail=f"Unknown resource URI: {uri}")
 
-    def _resolve_user(self, db: Session, auth_token: Optional[str]) -> Optional[User]:
-        if auth_token:
-            payload = decode_access_token(auth_token)
-            username = payload.get("sub")
-            if username:
-                user = db.query(User).filter(User.username == username).first()
-                if user and user.is_active:
-                    return user
+    def _resolve_auth_token(self, auth_token: Optional[str]) -> str:
+        token = auth_token or self.service_auth_token
+        if not token:
+            raise HTTPException(status_code=401, detail="Authentication required for watchlist tools")
+        return token
 
-        service_account_username = os.getenv("MCP_SERVICE_ACCOUNT_USERNAME")
-        if service_account_username:
-            return db.query(User).filter(User.username == service_account_username, User.is_active.is_(True)).first()
+    @staticmethod
+    def _auth_headers(auth_token: str) -> Dict[str, str]:
+        return {"Authorization": f"Bearer {auth_token}"}
 
-        return None
+    async def _api_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Optional[Dict[str, Any]] = None,
+        json_body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any] | List[Dict[str, Any]]:
+        url = urljoin(f"{self.api_base_url}/", path.lstrip("/"))
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.request(method, url, params=params, json=json_body, headers=headers)
+            except httpx.HTTPError as exc:
+                raise HTTPException(status_code=502, detail=f"Failed to reach Investory API: {exc}")
+
+        if response.status_code >= 400:
+            try:
+                detail = response.json().get("detail")
+            except Exception:
+                detail = response.text
+            raise HTTPException(status_code=response.status_code, detail=detail or "API request failed")
+
+        if response.status_code == 204 or not response.text:
+            return {}
+        return response.json()
 
 
 def _jsonrpc_result(request: MCPRequest, result: Any) -> Dict[str, Any]:
@@ -263,7 +277,11 @@ async def handle_jsonrpc(service: InvestoryMCPService, payload: Dict[str, Any]) 
     try:
         request = MCPRequest.model_validate(payload)
     except ValidationError as exc:
-        return {"jsonrpc": "2.0", "id": payload.get("id") if isinstance(payload, dict) else None, "error": {"code": -32600, "message": "Invalid Request", "data": exc.errors()}}
+        return {
+            "jsonrpc": "2.0",
+            "id": payload.get("id") if isinstance(payload, dict) else None,
+            "error": {"code": -32600, "message": "Invalid Request", "data": exc.errors()},
+        }
 
     try:
         if request.method == "tools/list":
@@ -286,7 +304,10 @@ async def handle_jsonrpc(service: InvestoryMCPService, payload: Dict[str, Any]) 
             if not uri:
                 return _jsonrpc_error(request, -32602, "Missing resource URI")
             result = await service.read_resource(str(uri), dict(params))
-            return _jsonrpc_result(request, {"contents": [{"uri": uri, "mimeType": "application/json", "text": json.dumps(result)}]})
+            return _jsonrpc_result(
+                request,
+                {"contents": [{"uri": uri, "mimeType": "application/json", "text": json.dumps(result)}]},
+            )
 
         return _jsonrpc_error(request, -32601, f"Method not found: {request.method}")
     except ValidationError as exc:

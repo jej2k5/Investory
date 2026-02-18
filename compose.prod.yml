@@ -69,7 +69,7 @@ services:
       MCP_TRANSPORT: http
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8090
-      MCP_SERVICE_ACCOUNT_USERNAME: ${MCP_SERVICE_ACCOUNT_USERNAME:-}
+      MCP_SERVICE_AUTH_TOKEN: ${MCP_SERVICE_AUTH_TOKEN:-}
     expose:
       - "8090"
     depends_on:

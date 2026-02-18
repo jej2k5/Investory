@@ -1,47 +1,12 @@
+import asyncio
+
 from fastapi import HTTPException
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from auth import create_access_token
 from mcp_server import InvestoryMCPService, handle_jsonrpc
-from models import Base, User, Watchlist
-
-
-engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base.metadata.create_all(bind=engine)
-
-
-def _seed_users_and_data():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    db = TestingSessionLocal()
-    user_a = User(username="usera", hashed_password="hashed", role="user", is_active=True, requires_password_change=False)
-    user_b = User(username="userb", hashed_password="hashed", role="user", is_active=True, requires_password_change=False)
-    db.add_all([user_a, user_b])
-    db.commit()
-    db.refresh(user_a)
-    db.refresh(user_b)
-
-    item_a = Watchlist(user_id=user_a.id, symbol="AAPL", company_name="Apple")
-    item_b = Watchlist(user_id=user_b.id, symbol="MSFT", company_name="Microsoft")
-    db.add_all([item_a, item_b])
-    db.commit()
-    db.close()
-
-
-def _token(username: str) -> str:
-    return create_access_token({"sub": username})
 
 
 def test_mcp_tools_list_exposes_stable_names_and_schemas():
-    service = InvestoryMCPService(db_session_factory=TestingSessionLocal)
+    service = InvestoryMCPService(api_base_url="http://api")
     tools = service.list_tools()
 
     names = {tool["name"] for tool in tools}
@@ -55,9 +20,9 @@ def test_mcp_tools_list_exposes_stable_names_and_schemas():
 
 
 def test_mcp_validation_rejects_invalid_payload_shape():
-    service = InvestoryMCPService(db_session_factory=TestingSessionLocal)
+    service = InvestoryMCPService(api_base_url="http://api")
 
-    response = __import__("asyncio").run(
+    response = asyncio.run(
         handle_jsonrpc(
             service,
             {
@@ -66,7 +31,7 @@ def test_mcp_validation_rejects_invalid_payload_shape():
                 "method": "tools/call",
                 "params": {
                     "name": InvestoryMCPService.TOOL_WATCHLIST_CREATE,
-                    "arguments": {"symbol": "AAPL", "target_buy_price": -1, "auth_token": _token("usera")},
+                    "arguments": {"symbol": "AAPL", "target_buy_price": -1, "auth_token": "token"},
                 },
             },
         )
@@ -75,48 +40,26 @@ def test_mcp_validation_rejects_invalid_payload_shape():
     assert response["error"]["code"] == -32602
 
 
-def test_watchlist_tools_are_scoped_to_authenticated_user():
-    _seed_users_and_data()
-    service = InvestoryMCPService(db_session_factory=TestingSessionLocal)
-
-    listed = __import__("asyncio").run(
-        service.call_tool(
-            InvestoryMCPService.TOOL_WATCHLIST_LIST,
-            {"limit": 50, "skip": 0, "auth_token": _token("usera")},
-        )
-    )
-    assert len(listed["items"]) == 1
-    assert listed["items"][0]["symbol"] == "AAPL"
-
-    try:
-        __import__("asyncio").run(
-            service.call_tool(
-                InvestoryMCPService.TOOL_WATCHLIST_DELETE,
-                {"item_id": listed["items"][0]["id"] + 1, "auth_token": _token("usera")},
-            )
-        )
-    except HTTPException as exc:
-        assert exc.status_code == 404
-    else:
-        raise AssertionError("Expected a 404 when deleting another user's item")
-
-
 def test_watchlist_tools_require_authentication():
-    _seed_users_and_data()
-    service = InvestoryMCPService(db_session_factory=TestingSessionLocal)
+    service = InvestoryMCPService(api_base_url="http://api")
 
     try:
-        __import__("asyncio").run(service.call_tool(InvestoryMCPService.TOOL_WATCHLIST_LIST, {"limit": 5, "skip": 0}))
+        asyncio.run(service.call_tool(InvestoryMCPService.TOOL_WATCHLIST_LIST, {"limit": 5, "skip": 0}))
     except HTTPException as exc:
         assert exc.status_code == 401
     else:
         raise AssertionError("Expected unauthenticated access to fail")
 
 
-def test_mcp_tool_routing_for_moat_evaluation():
-    service = InvestoryMCPService(db_session_factory=TestingSessionLocal)
+def test_mcp_tool_routing_for_moat_evaluation(monkeypatch):
+    service = InvestoryMCPService(api_base_url="http://api")
 
-    response = __import__("asyncio").run(
+    async def fake_api_request(*args, **kwargs):
+        return {"has_wide_moat": True}
+
+    monkeypatch.setattr(service, "_api_request", fake_api_request)
+
+    response = asyncio.run(
         handle_jsonrpc(
             service,
             {
@@ -138,3 +81,24 @@ def test_mcp_tool_routing_for_moat_evaluation():
     )
 
     assert response["result"]["content"][0]["json"]["has_wide_moat"] is True
+
+
+def test_watchlist_delete_returns_404_from_api(monkeypatch):
+    service = InvestoryMCPService(api_base_url="http://api")
+
+    async def fake_api_request(method, path, **kwargs):
+        raise HTTPException(status_code=404, detail="Watchlist item not found")
+
+    monkeypatch.setattr(service, "_api_request", fake_api_request)
+
+    try:
+        asyncio.run(
+            service.call_tool(
+                InvestoryMCPService.TOOL_WATCHLIST_DELETE,
+                {"item_id": 777, "auth_token": "token"},
+            )
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 404
+    else:
+        raise AssertionError("Expected 404 to pass through")
