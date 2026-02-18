@@ -202,8 +202,8 @@ Key endpoints:
 - `POST /api/valuation` - Calculate Sticker Price and MOS
 - `POST /api/analyses` - Save Four Ms analysis
 - `GET /api/analyses` - List saved analyses
-- `POST /api/watchlist` - Add stock to watchlist
-- `GET /api/watchlist` - Get all watchlist items
+- `POST /api/watchlist` - Add stock to the authenticated user's watchlist (JWT required)
+- `GET /api/watchlist` - Get authenticated user's watchlist items (JWT required)
 
 For detailed API documentation, see [docs/API.md](docs/API.md).
 
@@ -213,7 +213,7 @@ For detailed API documentation, see [docs/API.md](docs/API.md).
 
 Investory uses PostgreSQL 14+ with the following tables:
 
-- **users** - User accounts (future auth integration)
+- **users** - User accounts with JWT-based authentication
 - **analyses** - Saved stock analyses with Four Ms scores
 - **watchlist** - User watchlist with price alerts
 - **stock_cache** - Cached Alpha Vantage API responses (1-hour TTL)
@@ -250,8 +250,8 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instruction
 ## 🗺️ Roadmap
 
 **v1.1 - Authentication & Multi-User**
-- User authentication with JWT
-- Per-user watchlists and analyses
+- ✅ User authentication with JWT
+- ✅ Per-user watchlists and analyses
 - User preferences and settings
 
 **v1.2 - Advanced Features**

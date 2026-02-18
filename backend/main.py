@@ -969,13 +969,17 @@ async def get_analysis_stats(db: Session = Depends(get_db)):
 
 
 @app.post("/api/watchlist", response_model=WatchlistResponse)
-async def create_watchlist_item(item: WatchlistCreate, db: Session = Depends(get_db)):
+async def create_watchlist_item(
+    item: WatchlistCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
     """
     Add a stock to the watchlist.
     """
     try:
         db_item = Watchlist(
-            user_id=1,  # TODO: Get from auth
+            user_id=current_user.id,
             symbol=item.symbol.upper(),
             company_name=item.company_name,
             target_buy_price=item.target_buy_price,
@@ -997,20 +1001,36 @@ async def create_watchlist_item(item: WatchlistCreate, db: Session = Depends(get
 
 
 @app.get("/api/watchlist", response_model=List[WatchlistResponse])
-async def list_watchlist(limit: int = Query(50, ge=1, le=100), skip: int = Query(0, ge=0), db: Session = Depends(get_db)):
+async def list_watchlist(
+    limit: int = Query(50, ge=1, le=100),
+    skip: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
     """
     List all watchlist items.
     """
-    items = db.query(Watchlist).order_by(desc(Watchlist.created_at)).offset(skip).limit(limit).all()
+    items = (
+        db.query(Watchlist)
+        .filter(Watchlist.user_id == current_user.id)
+        .order_by(desc(Watchlist.created_at))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return [WatchlistResponse.from_orm(item) for item in items]
 
 
 @app.get("/api/watchlist/{item_id}", response_model=WatchlistResponse)
-async def get_watchlist_item(item_id: int, db: Session = Depends(get_db)):
+async def get_watchlist_item(
+    item_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
     """
     Get a specific watchlist item.
     """
-    item = db.query(Watchlist).filter(Watchlist.id == item_id).first()
+    item = db.query(Watchlist).filter(Watchlist.id == item_id, Watchlist.user_id == current_user.id).first()
 
     if not item:
         raise HTTPException(status_code=404, detail="Watchlist item not found")
@@ -1019,11 +1039,16 @@ async def get_watchlist_item(item_id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/api/watchlist/{item_id}", response_model=WatchlistResponse)
-async def update_watchlist_item(item_id: int, item_update: WatchlistUpdate, db: Session = Depends(get_db)):
+async def update_watchlist_item(
+    item_id: int,
+    item_update: WatchlistUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
     """
     Update a watchlist item.
     """
-    item = db.query(Watchlist).filter(Watchlist.id == item_id).first()
+    item = db.query(Watchlist).filter(Watchlist.id == item_id, Watchlist.user_id == current_user.id).first()
 
     if not item:
         raise HTTPException(status_code=404, detail="Watchlist item not found")
@@ -1048,11 +1073,15 @@ async def update_watchlist_item(item_id: int, item_update: WatchlistUpdate, db: 
 
 
 @app.delete("/api/watchlist/{item_id}")
-async def delete_watchlist_item(item_id: int, db: Session = Depends(get_db)):
+async def delete_watchlist_item(
+    item_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
     """
     Delete a watchlist item.
     """
-    item = db.query(Watchlist).filter(Watchlist.id == item_id).first()
+    item = db.query(Watchlist).filter(Watchlist.id == item_id, Watchlist.user_id == current_user.id).first()
 
     if not item:
         raise HTTPException(status_code=404, detail="Watchlist item not found")
