@@ -35,6 +35,11 @@ const normalizeWatchlistRow = (item, fallbackId = '') => ({
   updated_at: item.updated_at || item.created_at || null,
 });
 
+const isSameWatchlistRow = (left, right) => {
+  if (!left || !right) return false;
+  return String(left.id) === String(right.id) && String(left.symbol) === String(right.symbol);
+};
+
 const StockApp = () => {
   const { token } = useAuth();
   const [symbol, setSymbol] = useState('');
@@ -48,7 +53,7 @@ const StockApp = () => {
   const [tableError, setTableError] = useState(null);
   const [sortKey, setSortKey] = useState('updated_at');
   const [sortDirection, setSortDirection] = useState('desc');
-  const [selectedWatchlistId, setSelectedWatchlistId] = useState(null);
+  const [selectedWatchlistItem, setSelectedWatchlistItem] = useState(null);
   const [watchlistSaving, setWatchlistSaving] = useState(false);
   const [watchlistMessage, setWatchlistMessage] = useState(null);
   
@@ -146,9 +151,9 @@ const StockApp = () => {
       const normalizedRows = items.map((item) => normalizeWatchlistRow(item, `${item?.company_name || item?.company || 'watchlist-item'}-${item?.updated_at || item?.created_at || ''}`));
 
       setStocksTableData(normalizedRows);
-      setSelectedWatchlistId((currentSelectedId) => {
-        if (!currentSelectedId) return null;
-        return normalizedRows.some((row) => String(row.id) === String(currentSelectedId)) ? String(currentSelectedId) : null;
+      setSelectedWatchlistItem((currentSelectedItem) => {
+        if (!currentSelectedItem) return null;
+        return normalizedRows.find((row) => isSameWatchlistRow(row, currentSelectedItem)) || null;
       });
     } catch (err) {
       setTableError(err.message);
@@ -207,7 +212,7 @@ const StockApp = () => {
         const remaining = prev.filter((row) => row.id !== normalizedRow.id);
         return [normalizedRow, ...remaining];
       });
-      setSelectedWatchlistId(String(normalizedRow.id));
+      setSelectedWatchlistItem(normalizedRow);
       setWatchlistMessage({ type: 'success', text: `${payload.symbol} added to watchlist` });
     } catch (err) {
       setWatchlistMessage({ type: 'error', text: err.message });
@@ -260,8 +265,6 @@ const StockApp = () => {
     if (hasWideMoat === null || hasWideMoat === undefined) return '--';
     return hasWideMoat ? 'Wide moat: Yes' : 'Wide moat: No';
   };
-
-  const selectedWatchlistItem = stocksTableData.find((row) => String(row.id) === String(selectedWatchlistId)) || null;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -497,18 +500,18 @@ const StockApp = () => {
                           sortedStocksTableData.map((row) => (
                             <tr
                               key={row.id}
-                              onClick={() => setSelectedWatchlistId(String(row.id))}
+                              onClick={() => setSelectedWatchlistItem(row)}
                               onKeyDown={(event) => {
                                 if (event.key === 'Enter' || event.key === ' ') {
                                   event.preventDefault();
-                                  setSelectedWatchlistId(String(row.id));
+                                  setSelectedWatchlistItem(row);
                                 }
                               }}
                               role="button"
                               tabIndex={0}
-                              aria-pressed={String(selectedWatchlistId) === String(row.id)}
+                              aria-pressed={isSameWatchlistRow(selectedWatchlistItem, row)}
                               className={`transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 ${
-                                String(selectedWatchlistId) === String(row.id) ? 'bg-emerald-500/20' : 'hover:bg-white/10'
+                                isSameWatchlistRow(selectedWatchlistItem, row) ? 'bg-emerald-500/20' : 'hover:bg-white/10'
                               }`}
                             >
                               <td className="px-4 py-3 text-white font-semibold">{row.symbol}</td>
@@ -548,7 +551,7 @@ const StockApp = () => {
                           <p className="text-white/60 text-sm">{selectedWatchlistItem.company_name}</p>
                         </div>
                         <button
-                          onClick={() => setSelectedWatchlistId(null)}
+                          onClick={() => setSelectedWatchlistItem(null)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/70 hover:bg-white/10"
                         >
                           Clear
