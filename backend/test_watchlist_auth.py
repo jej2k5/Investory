@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -27,6 +28,16 @@ def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
+
+
+
+@pytest.fixture(autouse=True)
+def _reset_auth_override():
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides.pop(get_current_active_user, None)
+    yield
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides.pop(get_current_active_user, None)
 
 def _reset_data():
     Base.metadata.drop_all(bind=engine)

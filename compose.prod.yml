@@ -31,7 +31,7 @@ services:
     container_name: investory-backend-prod
     restart: always
     environment:
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      INVESTORY_API_BASE_URL: ${INVESTORY_API_BASE_URL:-http://backend:8000}
       ALPHA_VANTAGE_KEY: ${ALPHA_VANTAGE_KEY}
       MASSIVE_API_KEY: ${MASSIVE_API_KEY}
       API_HOST: 0.0.0.0
@@ -39,7 +39,7 @@ services:
     expose:
       - "8000"
     depends_on:
-      db:
+      backend:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -53,6 +53,39 @@ services:
       sh -c "
         python init_db.py || true &&
         uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+      "
+
+
+  # MCP Service (HTTP transport for agent platforms)
+  mcp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: investory-mcp-prod
+    restart: always
+    environment:
+      INVESTORY_API_BASE_URL: ${INVESTORY_API_BASE_URL:-http://backend:8000}
+      SECRET_KEY: ${SECRET_KEY}
+      MCP_TRANSPORT: http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8090
+      MCP_SERVICE_ACCOUNT_USERNAME: ${MCP_SERVICE_ACCOUNT_USERNAME:-}
+    expose:
+      - "8090"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - investory-network
+    command: >
+      sh -c "
+        python mcp_server.py --transport http --host 0.0.0.0 --port 8090
       "
 
   # React Frontend
