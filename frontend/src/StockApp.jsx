@@ -54,6 +54,7 @@ const StockApp = () => {
   const [sortKey, setSortKey] = useState('updated_at');
   const [sortDirection, setSortDirection] = useState('desc');
   const [selectedWatchlistItem, setSelectedWatchlistItem] = useState(null);
+  const [watchlistDetailsLoading, setWatchlistDetailsLoading] = useState(false);
   const [watchlistSaving, setWatchlistSaving] = useState(false);
   const [watchlistMessage, setWatchlistMessage] = useState(null);
   
@@ -218,6 +219,36 @@ const StockApp = () => {
       setWatchlistMessage({ type: 'error', text: err.message });
     } finally {
       setWatchlistSaving(false);
+    }
+  };
+
+  const selectWatchlistItem = async (row) => {
+    setSelectedWatchlistItem(row);
+
+    // If we have a stable numeric ID, fetch the latest version of this item.
+    if (!/^\d+$/.test(String(row.id))) {
+      return;
+    }
+
+    setWatchlistDetailsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/watchlist/${row.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.detail || 'Unable to load watchlist item details');
+      }
+
+      const detailedItem = await response.json();
+      setSelectedWatchlistItem(normalizeWatchlistRow(detailedItem, row.id));
+    } catch (err) {
+      setTableError(err.message);
+    } finally {
+      setWatchlistDetailsLoading(false);
     }
   };
 
@@ -500,11 +531,11 @@ const StockApp = () => {
                           sortedStocksTableData.map((row) => (
                             <tr
                               key={row.id}
-                              onClick={() => setSelectedWatchlistItem(row)}
+                              onClick={() => selectWatchlistItem(row)}
                               onKeyDown={(event) => {
                                 if (event.key === 'Enter' || event.key === ' ') {
                                   event.preventDefault();
-                                  setSelectedWatchlistItem(row);
+                                  selectWatchlistItem(row);
                                 }
                               }}
                               role="button"
@@ -549,6 +580,9 @@ const StockApp = () => {
                         <div>
                           <h3 className="text-xl font-semibold text-white">{selectedWatchlistItem.symbol} details</h3>
                           <p className="text-white/60 text-sm">{selectedWatchlistItem.company_name}</p>
+                          {watchlistDetailsLoading && (
+                            <p className="text-emerald-300/80 text-xs mt-1">Loading full details…</p>
+                          )}
                         </div>
                         <button
                           onClick={() => setSelectedWatchlistItem(null)}
