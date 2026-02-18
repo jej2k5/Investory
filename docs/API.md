@@ -6,7 +6,15 @@ http://localhost:8000/api
 ```
 
 ## Authentication
-Currently, the API is open and does not require authentication. Future versions will implement JWT-based authentication.
+The API uses JWT bearer authentication for protected routes.
+
+Include the access token from `POST /api/auth/login` in the `Authorization` header:
+
+```bash
+-H "Authorization: Bearer <token>"
+```
+
+Watchlist endpoints are authenticated and always scoped to the currently authenticated user.
 
 ## Rate Limiting
 - Inherits Alpha Vantage's rate limits:
@@ -300,6 +308,32 @@ Get a specific analysis by ID.
 **Example:**
 ```bash
 curl http://localhost:8000/api/analyses/1
+```
+
+
+### Watchlist (Authenticated)
+
+All watchlist endpoints require `Authorization: Bearer <token>` and only operate on the authenticated user's own items.
+
+#### `POST /api/watchlist`
+Add a stock to the authenticated user's watchlist.
+
+#### `GET /api/watchlist`
+List watchlist items for the authenticated user only.
+
+#### `GET /api/watchlist/{item_id}`
+Get one watchlist item owned by the authenticated user. Returns `404` if not found or not owned.
+
+#### `PUT /api/watchlist/{item_id}`
+Update one watchlist item owned by the authenticated user. Returns `404` if not found or not owned.
+
+#### `DELETE /api/watchlist/{item_id}`
+Delete one watchlist item owned by the authenticated user. Returns `404` if not found or not owned.
+
+**Example:**
+```bash
+curl -X GET http://localhost:8000/api/watchlist \
+  -H "Authorization: Bearer <token>"
 ```
 
 ---

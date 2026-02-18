@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Shield, Users, DollarSign, Search, BarChart3, Sparkles, ArrowRight, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const StockApp = () => {
+  const { token } = useAuth();
   const [symbol, setSymbol] = useState('');
   const [stockData, setStockData] = useState(null);
   const [valuation, setValuation] = useState(null);
@@ -98,7 +100,9 @@ const StockApp = () => {
     setTableError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/watchlist`);
+      const response = await fetch(`${API_BASE_URL}/watchlist`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!response.ok) throw new Error('Unable to load watchlist');
 
       const data = await response.json();
@@ -139,7 +143,10 @@ const StockApp = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/watchlist`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 
