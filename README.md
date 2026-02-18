@@ -37,6 +37,7 @@ Combined with automated financial analysis, growth rate calculations, and valuat
 - Valuation engine (Sticker Price & Margin of Safety)
 - Four Ms scoring and recommendation system
 - Watchlist management with price alerts
+- MCP server support (JSON-RPC over stdio/HTTP) for agent integrations
 
 **Frontend (React + Tailwind CSS)**
 - Modern, responsive UI with dark mode
@@ -75,6 +76,7 @@ investory/
 │   └── vite.config.js
 ├── docs/                # Documentation
 │   ├── API.md          # API reference
+│   ├── MCP.md          # MCP integration guide
 │   ├── DATABASE.md     # Database schema
 │   ├── DEPLOYMENT.md   # Production deployment guide
 │   └── DOCKER.md       # Docker usage
@@ -89,6 +91,12 @@ investory/
 │   React     │─────▶│   FastAPI    │─────▶│  PostgreSQL   │
 │  Frontend   │      │   Backend    │      │   Database    │
 └─────────────┘      └──────────────┘      └───────────────┘
+                            ▲
+                            │
+                     ┌──────────────┐
+                     │ MCP Server   │
+                     │ (stdio/HTTP) │
+                     └──────────────┘
                             │
                             ▼
                      ┌──────────────┐
@@ -124,6 +132,7 @@ Access the application:
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/api/docs
+- **MCP Endpoint (HTTP transport)**: http://localhost:8090/mcp
 
 ---
 
@@ -206,6 +215,8 @@ Key endpoints:
 - `GET /api/watchlist` - Get authenticated user's watchlist items (JWT required)
 
 For detailed API documentation, see [docs/API.md](docs/API.md).
+
+For MCP tool/resource integration (agent platforms, stdio/HTTP transport), see [docs/MCP.md](docs/MCP.md).
 
 ---
 
