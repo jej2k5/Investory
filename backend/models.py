@@ -99,6 +99,16 @@ class Watchlist(Base):
     alert_enabled = Column(Boolean, default=False)
     alert_price = Column(Float)
 
+    # Moat snapshot (at time of adding to watchlist)
+    moat_score = Column(Integer, CheckConstraint("moat_score >= 1 AND moat_score <= 5"))
+    moat_assessment = Column(String(50))
+    has_wide_moat = Column(Boolean)
+    book_value_growth = Column(Float)
+    eps_growth = Column(Float)
+    cash_flow_growth = Column(Float)
+    sales_growth = Column(Float)
+    roic = Column(Float)
+
     # Notes
     notes = Column(Text)
 

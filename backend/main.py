@@ -986,6 +986,14 @@ async def create_watchlist_item(
             target_sell_price=item.target_sell_price,
             alert_enabled=item.alert_enabled,
             alert_price=item.alert_price,
+            moat_score=item.moat_score,
+            moat_assessment=item.moat_assessment,
+            has_wide_moat=item.has_wide_moat,
+            book_value_growth=item.book_value_growth,
+            eps_growth=item.eps_growth,
+            cash_flow_growth=item.cash_flow_growth,
+            sales_growth=item.sales_growth,
+            roic=item.roic,
             notes=item.notes,
         )
 
@@ -1053,6 +1061,8 @@ async def update_watchlist_item(
     if not item:
         raise HTTPException(status_code=404, detail="Watchlist item not found")
 
+    if item_update.company_name is not None:
+        item.company_name = item_update.company_name
     if item_update.target_buy_price is not None:
         item.target_buy_price = item_update.target_buy_price
     if item_update.target_sell_price is not None:
@@ -1061,6 +1071,22 @@ async def update_watchlist_item(
         item.alert_enabled = item_update.alert_enabled
     if item_update.alert_price is not None:
         item.alert_price = item_update.alert_price
+    if item_update.moat_score is not None:
+        item.moat_score = item_update.moat_score
+    if item_update.moat_assessment is not None:
+        item.moat_assessment = item_update.moat_assessment
+    if item_update.has_wide_moat is not None:
+        item.has_wide_moat = item_update.has_wide_moat
+    if item_update.book_value_growth is not None:
+        item.book_value_growth = item_update.book_value_growth
+    if item_update.eps_growth is not None:
+        item.eps_growth = item_update.eps_growth
+    if item_update.cash_flow_growth is not None:
+        item.cash_flow_growth = item_update.cash_flow_growth
+    if item_update.sales_growth is not None:
+        item.sales_growth = item_update.sales_growth
+    if item_update.roic is not None:
+        item.roic = item_update.roic
     if item_update.notes is not None:
         item.notes = item_update.notes
 

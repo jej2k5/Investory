@@ -132,6 +132,14 @@ class WatchlistBase(BaseModel):
     target_sell_price: Optional[float] = Field(None, gt=0)
     alert_enabled: bool = False
     alert_price: Optional[float] = Field(None, gt=0)
+    moat_score: Optional[int] = Field(None, ge=1, le=5)
+    moat_assessment: Optional[str] = None
+    has_wide_moat: Optional[bool] = None
+    book_value_growth: Optional[float] = None
+    eps_growth: Optional[float] = None
+    cash_flow_growth: Optional[float] = None
+    sales_growth: Optional[float] = None
+    roic: Optional[float] = None
     notes: Optional[str] = None
 
     @validator("symbol")
@@ -144,10 +152,19 @@ class WatchlistCreate(WatchlistBase):
 
 
 class WatchlistUpdate(BaseModel):
+    company_name: Optional[str] = None
     target_buy_price: Optional[float] = Field(None, gt=0)
     target_sell_price: Optional[float] = Field(None, gt=0)
     alert_enabled: Optional[bool] = None
     alert_price: Optional[float] = Field(None, gt=0)
+    moat_score: Optional[int] = Field(None, ge=1, le=5)
+    moat_assessment: Optional[str] = None
+    has_wide_moat: Optional[bool] = None
+    book_value_growth: Optional[float] = None
+    eps_growth: Optional[float] = None
+    cash_flow_growth: Optional[float] = None
+    sales_growth: Optional[float] = None
+    roic: Optional[float] = None
     notes: Optional[str] = None
 
 
