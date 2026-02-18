@@ -6,7 +6,7 @@ import os
 from contextlib import contextmanager
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -81,7 +81,45 @@ def init_db():
     from models import Base
 
     Base.metadata.create_all(bind=engine)
+    ensure_watchlist_schema_compatibility()
     print("✅ Database tables created successfully!")
+
+
+def ensure_watchlist_schema_compatibility() -> None:
+    """
+    Backfill missing columns in `watchlists` for environments that created the
+    table before moat/growth snapshot fields were added.
+
+    SQLAlchemy's `create_all()` does not alter existing tables, so this keeps
+    long-lived databases compatible without requiring Alembic migrations.
+    """
+
+    watchlist_columns = {
+        "moat_score": "INTEGER",
+        "moat_assessment": "VARCHAR(50)",
+        "has_wide_moat": "BOOLEAN",
+        "book_value_growth": "FLOAT",
+        "eps_growth": "FLOAT",
+        "cash_flow_growth": "FLOAT",
+        "sales_growth": "FLOAT",
+        "roic": "FLOAT",
+        "notes": "TEXT",
+    }
+
+    inspector = inspect(engine)
+    if "watchlists" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("watchlists")}
+    missing = [name for name in watchlist_columns if name not in existing]
+    if not missing:
+        return
+
+    with engine.begin() as connection:
+        for column_name in missing:
+            column_type = watchlist_columns[column_name]
+            connection.execute(text(f"ALTER TABLE watchlists ADD COLUMN {column_name} {column_type}"))
+    print(f"✅ Added missing watchlists columns: {', '.join(missing)}")
 
 
 def drop_db():
