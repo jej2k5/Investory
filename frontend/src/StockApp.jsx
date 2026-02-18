@@ -16,6 +16,25 @@ const getWatchlistItemId = (item, fallback = '') => {
     ?? fallback;
 };
 
+
+const normalizeWatchlistRow = (item, fallbackId = '') => ({
+  id: String(getWatchlistItemId(item, fallbackId)),
+  symbol: item.symbol || item.stock_symbol || '--',
+  company_name: item.company_name || item.company || '--',
+  target_buy_price: item.target_buy_price ?? item.mos_price ?? null,
+  target_sell_price: item.target_sell_price ?? item.sticker_price ?? null,
+  alert_enabled: item.alert_enabled ?? item.alert ?? false,
+  moat_score: item.moat_score ?? null,
+  moat_assessment: item.moat_assessment ?? null,
+  has_wide_moat: item.has_wide_moat ?? null,
+  book_value_growth: item.book_value_growth ?? null,
+  eps_growth: item.eps_growth ?? null,
+  cash_flow_growth: item.cash_flow_growth ?? null,
+  sales_growth: item.sales_growth ?? null,
+  roic: item.roic ?? null,
+  updated_at: item.updated_at || item.created_at || null,
+});
+
 const StockApp = () => {
   const { token } = useAuth();
   const [symbol, setSymbol] = useState('');
@@ -124,28 +143,12 @@ const StockApp = () => {
       const data = await response.json();
       const items = Array.isArray(data) ? data : data.items || data.results || [];
 
-      const normalizedRows = items.map((item) => ({
-        id: getWatchlistItemId(item, `${item?.company_name || item?.company || 'watchlist-item'}-${item?.updated_at || item?.created_at || ''}`),
-        symbol: item.symbol || item.stock_symbol || '--',
-        company_name: item.company_name || item.company || '--',
-        target_buy_price: item.target_buy_price ?? item.mos_price ?? null,
-        target_sell_price: item.target_sell_price ?? item.sticker_price ?? null,
-        alert_enabled: item.alert_enabled ?? item.alert ?? false,
-        moat_score: item.moat_score ?? null,
-        moat_assessment: item.moat_assessment ?? null,
-        has_wide_moat: item.has_wide_moat ?? null,
-        book_value_growth: item.book_value_growth ?? null,
-        eps_growth: item.eps_growth ?? null,
-        cash_flow_growth: item.cash_flow_growth ?? null,
-        sales_growth: item.sales_growth ?? null,
-        roic: item.roic ?? null,
-        updated_at: item.updated_at || item.created_at || null,
-      }));
+      const normalizedRows = items.map((item) => normalizeWatchlistRow(item, `${item?.company_name || item?.company || 'watchlist-item'}-${item?.updated_at || item?.created_at || ''}`));
 
       setStocksTableData(normalizedRows);
       setSelectedWatchlistId((currentSelectedId) => {
         if (!currentSelectedId) return null;
-        return normalizedRows.some((row) => row.id === currentSelectedId) ? currentSelectedId : null;
+        return normalizedRows.some((row) => String(row.id) === String(currentSelectedId)) ? String(currentSelectedId) : null;
       });
     } catch (err) {
       setTableError(err.message);
@@ -198,29 +201,13 @@ const StockApp = () => {
       }
 
       const savedItem = await response.json();
-      const normalizedRow = {
-        id: getWatchlistItemId(savedItem, payload.symbol),
-        symbol: savedItem.symbol || savedItem.stock_symbol || payload.symbol,
-        company_name: savedItem.company_name || savedItem.company || payload.company_name,
-        target_buy_price: savedItem.target_buy_price ?? savedItem.mos_price ?? payload.target_buy_price,
-        target_sell_price: savedItem.target_sell_price ?? savedItem.sticker_price ?? payload.target_sell_price,
-        alert_enabled: savedItem.alert_enabled ?? savedItem.alert ?? payload.alert_enabled,
-        moat_score: savedItem.moat_score ?? payload.moat_score,
-        moat_assessment: savedItem.moat_assessment ?? payload.moat_assessment,
-        has_wide_moat: savedItem.has_wide_moat ?? payload.has_wide_moat,
-        book_value_growth: savedItem.book_value_growth ?? payload.book_value_growth,
-        eps_growth: savedItem.eps_growth ?? payload.eps_growth,
-        cash_flow_growth: savedItem.cash_flow_growth ?? payload.cash_flow_growth,
-        sales_growth: savedItem.sales_growth ?? payload.sales_growth,
-        roic: savedItem.roic ?? payload.roic,
-        updated_at: savedItem.updated_at || savedItem.created_at || new Date().toISOString(),
-      };
+      const normalizedRow = normalizeWatchlistRow(savedItem, payload.symbol);
 
       setStocksTableData((prev) => {
         const remaining = prev.filter((row) => row.id !== normalizedRow.id);
         return [normalizedRow, ...remaining];
       });
-      setSelectedWatchlistId(normalizedRow.id);
+      setSelectedWatchlistId(String(normalizedRow.id));
       setWatchlistMessage({ type: 'success', text: `${payload.symbol} added to watchlist` });
     } catch (err) {
       setWatchlistMessage({ type: 'error', text: err.message });
@@ -274,7 +261,7 @@ const StockApp = () => {
     return hasWideMoat ? 'Wide moat: Yes' : 'Wide moat: No';
   };
 
-  const selectedWatchlistItem = stocksTableData.find((row) => row.id === selectedWatchlistId) || null;
+  const selectedWatchlistItem = stocksTableData.find((row) => String(row.id) === String(selectedWatchlistId)) || null;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -510,18 +497,18 @@ const StockApp = () => {
                           sortedStocksTableData.map((row) => (
                             <tr
                               key={row.id}
-                              onClick={() => setSelectedWatchlistId(row.id)}
+                              onClick={() => setSelectedWatchlistId(String(row.id))}
                               onKeyDown={(event) => {
                                 if (event.key === 'Enter' || event.key === ' ') {
                                   event.preventDefault();
-                                  setSelectedWatchlistId(row.id);
+                                  setSelectedWatchlistId(String(row.id));
                                 }
                               }}
                               role="button"
                               tabIndex={0}
-                              aria-pressed={selectedWatchlistId === row.id}
+                              aria-pressed={String(selectedWatchlistId) === String(row.id)}
                               className={`transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 ${
-                                selectedWatchlistId === row.id ? 'bg-emerald-500/20' : 'hover:bg-white/10'
+                                String(selectedWatchlistId) === String(row.id) ? 'bg-emerald-500/20' : 'hover:bg-white/10'
                               }`}
                             >
                               <td className="px-4 py-3 text-white font-semibold">{row.symbol}</td>
