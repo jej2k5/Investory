@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
     environment:
       INVESTORY_API_BASE_URL: ${INVESTORY_API_BASE_URL:-http://backend:8000}
-      DATABASE_URL: ${postgrespostgresql://${DB_USER_USER}:${DB_PASSWORD}@ldb:5432/investory}
+      DATABASE_URL: ${DATABASE_URL}
       ALPHA_VANTAGE_KEY: ${ALPHA_VANTAGE_KEY:-demo}
       MASSIVE_API_KEY: ${MASSIVE_API_KEY}
       API_HOST: 0.0.0.0
