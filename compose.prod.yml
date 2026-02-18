@@ -39,7 +39,7 @@ services:
     expose:
       - "8000"
     depends_on:
-      backend:
+      db:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
