@@ -101,9 +101,14 @@ const StockApp = () => {
 
     try {
       const response = await fetch(`${API_BASE_URL}/watchlist`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (!response.ok) throw new Error('Unable to load watchlist');
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.detail || 'Unable to load watchlist');
+      }
 
       const data = await response.json();
       const items = Array.isArray(data) ? data : data.items || data.results || [];
@@ -165,7 +170,9 @@ const StockApp = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Unable to add stock to watchlist');
+        const errorPayload = await response.json().catch(() => null);
+        const detail = errorPayload?.detail || 'Unable to add stock to watchlist';
+        throw new Error(detail);
       }
 
       const savedItem = await response.json();

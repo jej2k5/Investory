@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from main import app, get_current_active_user, get_db
+from main import app, get_current_user, get_db
 from models import Base, User, Watchlist
 
 
@@ -34,10 +34,10 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def _reset_auth_override():
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides.pop(get_current_active_user, None)
+    app.dependency_overrides.pop(get_current_user, None)
     yield
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides.pop(get_current_active_user, None)
+    app.dependency_overrides.pop(get_current_user, None)
 
 def _reset_data():
     Base.metadata.drop_all(bind=engine)
@@ -74,7 +74,7 @@ def _as_user(user_id: int):
         finally:
             db.close()
 
-    app.dependency_overrides[get_current_active_user] = _override
+    app.dependency_overrides[get_current_user] = _override
 
 
 def test_list_watchlist_is_scoped_to_authenticated_user():
@@ -133,3 +133,27 @@ def test_user_cannot_delete_other_users_watchlist_item():
     response = client.delete(f"/api/watchlist/{item_b_id}")
 
     assert response.status_code == 404
+
+
+def test_watchlist_allows_user_pending_password_change():
+    user_a_id, _, _, _ = _reset_data()
+
+    def _override():
+        db = TestingSessionLocal()
+        try:
+            user = db.query(User).filter(User.id == user_a_id).first()
+            user.requires_password_change = True
+            return user
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_current_user] = _override
+
+    response = client.post(
+        "/api/watchlist",
+        json={"symbol": "GOOG", "company_name": "Alphabet", "alert_enabled": True},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["symbol"] == "GOOG"
