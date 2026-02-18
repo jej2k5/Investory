@@ -103,7 +103,6 @@ const StockApp = () => {
       const response = await fetch(`${API_BASE_URL}/watchlist`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-Auth-Token': token,
         },
       });
       if (!response.ok) {
