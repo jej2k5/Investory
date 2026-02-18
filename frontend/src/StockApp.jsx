@@ -110,6 +110,9 @@ const StockApp = () => {
         target_buy_price: item.target_buy_price ?? item.mos_price ?? null,
         target_sell_price: item.target_sell_price ?? item.sticker_price ?? null,
         alert_enabled: item.alert_enabled ?? item.alert ?? false,
+        moat_score: item.moat_score ?? null,
+        moat_assessment: item.moat_assessment ?? null,
+        has_wide_moat: item.has_wide_moat ?? null,
         updated_at: item.updated_at || item.created_at || null,
       }));
 
@@ -128,12 +131,23 @@ const StockApp = () => {
     setWatchlistSaving(true);
     setWatchlistMessage(null);
 
+    const moatEvaluation = evaluateMoat();
     const payload = {
       symbol: stockData.symbol,
       company_name: stockData.company_name,
       target_buy_price: valuation?.mos_price ?? null,
       target_sell_price: valuation?.sticker_price ?? null,
       alert_enabled: true,
+      moat_score: moatScore > 0 ? moatScore : null,
+      moat_assessment: moatEvaluation
+        ? (moatEvaluation.pass ? 'WIDE MOAT' : 'WEAK MOAT')
+        : null,
+      has_wide_moat: moatEvaluation?.pass ?? null,
+      book_value_growth: stockData.growth_rates?.book_value ?? null,
+      eps_growth: stockData.growth_rates?.eps ?? null,
+      cash_flow_growth: stockData.growth_rates?.cash_flow ?? null,
+      sales_growth: stockData.growth_rates?.sales ?? null,
+      roic: stockData.growth_rates?.roic ?? null,
     };
 
     try {
@@ -154,6 +168,9 @@ const StockApp = () => {
         target_buy_price: savedItem.target_buy_price ?? savedItem.mos_price ?? payload.target_buy_price,
         target_sell_price: savedItem.target_sell_price ?? savedItem.sticker_price ?? payload.target_sell_price,
         alert_enabled: savedItem.alert_enabled ?? savedItem.alert ?? payload.alert_enabled,
+        moat_score: savedItem.moat_score ?? payload.moat_score,
+        moat_assessment: savedItem.moat_assessment ?? payload.moat_assessment,
+        has_wide_moat: savedItem.has_wide_moat ?? payload.has_wide_moat,
         updated_at: savedItem.updated_at || savedItem.created_at || new Date().toISOString(),
       };
 
@@ -402,6 +419,7 @@ const StockApp = () => {
                             { label: 'Target Buy', key: null },
                             { label: 'Target Sell', key: null },
                             { label: 'Alert', key: null },
+                            { label: 'Moat', key: null },
                             { label: 'Last Updated', key: 'updated_at' },
                           ].map((column) => (
                             <th
@@ -422,7 +440,7 @@ const StockApp = () => {
                       <tbody className="divide-y divide-white/10 bg-white/5">
                         {tableLoading ? (
                           <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-white/70">
+                            <td colSpan={7} className="px-4 py-12 text-center text-white/70">
                               <span className="inline-flex items-center gap-2">
                                 <Loader2 className="animate-spin" size={18} />
                                 Loading stocks...
@@ -431,7 +449,7 @@ const StockApp = () => {
                           </tr>
                         ) : sortedStocksTableData.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-white/50">No stocks yet.</td>
+                            <td colSpan={7} className="px-4 py-12 text-center text-white/50">No stocks yet.</td>
                           </tr>
                         ) : (
                           sortedStocksTableData.map((row) => (
@@ -446,6 +464,14 @@ const StockApp = () => {
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-white/50"><XCircle size={14} />Off</span>
                                 )}
+                              </td>
+                              <td className="px-4 py-3 text-white/70">
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-emerald-300 font-medium">{row.moat_score ? `${row.moat_score}/5` : '--'}</span>
+                                  <span className={`${row.has_wide_moat ? 'text-emerald-400' : 'text-white/50'} text-xs`}>
+                                    {row.moat_assessment || (row.has_wide_moat === null ? '--' : row.has_wide_moat ? 'WIDE MOAT' : 'WEAK MOAT')}
+                                  </span>
+                                </div>
                               </td>
                               <td className="px-4 py-3 text-white/60">
                                 {row.updated_at ? new Date(row.updated_at).toLocaleDateString() : '--'}
