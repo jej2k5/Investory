@@ -11,6 +11,7 @@ from database import get_db
 from main import (
     _safe_float,
     app,
+    get_current_active_user,
     calculate_cagr,
     calculate_growth_rates,
     calculate_overall_score,
@@ -143,8 +144,16 @@ def test_watchlist_moat_fields_round_trip_create_list_get_update():
 
     with TestClient(app) as client:
         with TestingSessionLocal() as db:
-            db.add(User(username="testuser", hashed_password="hashed", role="user"))
+            user = User(username="testuser", hashed_password="hashed", role="user", is_active=True, requires_password_change=False)
+            db.add(user)
             db.commit()
+            db.refresh(user)
+
+        def override_current_user():
+            with TestingSessionLocal() as db:
+                return db.query(User).filter(User.id == user.id).first()
+
+        app.dependency_overrides[get_current_active_user] = override_current_user
 
         payload = {
             "symbol": "msft",
