@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from main import app, get_current_active_user, get_db
+from main import app, get_current_user, get_db
 from models import Base, User, Watchlist
 
 
@@ -34,10 +34,10 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def _reset_auth_override():
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides.pop(get_current_active_user, None)
+    app.dependency_overrides.pop(get_current_user, None)
     yield
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides.pop(get_current_active_user, None)
+    app.dependency_overrides.pop(get_current_user, None)
 
 def _reset_data():
     Base.metadata.drop_all(bind=engine)
@@ -74,7 +74,7 @@ def _as_user(user_id: int):
         finally:
             db.close()
 
-    app.dependency_overrides[get_current_active_user] = _override
+    app.dependency_overrides[get_current_user] = _override
 
 
 def test_list_watchlist_is_scoped_to_authenticated_user():
