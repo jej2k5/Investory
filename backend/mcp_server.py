@@ -84,6 +84,8 @@ class InvestoryMCPService:
     TOOL_WATCHLIST_CREATE = "investory.watchlist.create"
     TOOL_WATCHLIST_UPDATE = "investory.watchlist.update"
     TOOL_WATCHLIST_DELETE = "investory.watchlist.delete"
+    MCP_PROTOCOL_VERSION = "2024-11-05"
+    MCP_SERVER_INFO = {"name": "investory-mcp", "version": "1.0.0"}
 
     def __init__(self, api_base_url: Optional[str] = None):
         self.api_base_url = (api_base_url or os.getenv("INVESTORY_API_BASE_URL", "http://localhost:8000")).rstrip("/")
@@ -149,6 +151,16 @@ class InvestoryMCPService:
                 "description": "Authenticated user's watchlist data.",
             },
         ]
+
+    def initialize_result(self) -> Dict[str, Any]:
+        return {
+            "protocolVersion": self.MCP_PROTOCOL_VERSION,
+            "capabilities": {
+                "tools": {"listChanged": False},
+                "resources": {"subscribe": False, "listChanged": False},
+            },
+            "serverInfo": self.MCP_SERVER_INFO,
+        }
 
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         if name not in self.tools:
@@ -274,6 +286,15 @@ async def handle_jsonrpc(service: InvestoryMCPService, payload: Dict[str, Any]) 
         }
 
     try:
+        if request.method == "initialize":
+            return _jsonrpc_result(request, service.initialize_result())
+
+        if request.method == "notifications/initialized":
+            return _jsonrpc_result(request, {})
+
+        if request.method == "ping":
+            return _jsonrpc_result(request, {})
+
         if request.method == "tools/list":
             return _jsonrpc_result(request, {"tools": service.list_tools()})
 

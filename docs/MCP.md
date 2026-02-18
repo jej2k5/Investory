@@ -39,6 +39,14 @@ Compose config now uses `INVESTORY_API_BASE_URL` for MCP service API targeting (
 
 The MCP service proxies to the backend API and does not connect to the database directly.
 
+## Connector compatibility
+
+The MCP JSON-RPC router supports connector lifecycle methods used by common MCP clients:
+
+- `initialize` returns protocol metadata with `protocolVersion: "2024-11-05"`, declared `tools`/`resources` capabilities, and `serverInfo` for Investory MCP.
+- `notifications/initialized` is tolerated as a no-op success path.
+- `ping` is supported and returns an empty success result (`{}`).
+
 ## Architecture note: API layer vs direct DB
 
 The MCP server should use the same API/domain layer functions as REST endpoints for business operations (especially watchlist ownership checks), instead of duplicating DB CRUD logic in MCP handlers. This keeps behavior consistent across REST and MCP and reduces permission drift risk.

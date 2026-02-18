@@ -40,6 +40,63 @@ def test_mcp_validation_rejects_invalid_payload_shape():
     assert response["error"]["code"] == -32602
 
 
+def test_mcp_initialize_returns_lifecycle_metadata():
+    service = InvestoryMCPService(api_base_url="http://api")
+
+    response = asyncio.run(
+        handle_jsonrpc(
+            service,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {},
+            },
+        )
+    )
+
+    assert response["result"]["protocolVersion"] == InvestoryMCPService.MCP_PROTOCOL_VERSION
+    assert "tools" in response["result"]["capabilities"]
+    assert "resources" in response["result"]["capabilities"]
+    assert response["result"]["serverInfo"]["name"] == "investory-mcp"
+
+
+def test_mcp_tolerates_notifications_initialized():
+    service = InvestoryMCPService(api_base_url="http://api")
+
+    response = asyncio.run(
+        handle_jsonrpc(
+            service,
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "notifications/initialized",
+                "params": {},
+            },
+        )
+    )
+
+    assert response["result"] == {}
+
+
+def test_mcp_ping_returns_empty_result():
+    service = InvestoryMCPService(api_base_url="http://api")
+
+    response = asyncio.run(
+        handle_jsonrpc(
+            service,
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "ping",
+                "params": {},
+            },
+        )
+    )
+
+    assert response["result"] == {}
+
+
 def test_watchlist_tools_require_authentication():
     service = InvestoryMCPService(api_base_url="http://api")
 
