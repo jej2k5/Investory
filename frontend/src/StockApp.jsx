@@ -165,6 +165,7 @@ const StockApp = () => {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          'X-Auth-Token': token,
         },
         body: JSON.stringify(payload),
       });

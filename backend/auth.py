@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -25,7 +25,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # HTTP Bearer scheme for token authentication
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -107,7 +107,8 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     """
@@ -123,7 +124,17 @@ async def get_current_user(
     Raises:
         HTTPException: If authentication fails
     """
-    token = credentials.credentials
+    token = credentials.credentials if credentials else None
+    if not token:
+        token = request.headers.get("x-auth-token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     payload = decode_access_token(token)
 
     username: str = payload.get("sub")
