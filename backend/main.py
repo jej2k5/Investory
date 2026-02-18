@@ -44,7 +44,6 @@ from schemas import (
 from auth import (
     authenticate_user,
     create_access_token,
-    get_current_active_user,
     get_current_admin_user,
     get_current_user,
     hash_password,
@@ -971,7 +970,7 @@ async def get_analysis_stats(db: Session = Depends(get_db)):
 @app.post("/api/watchlist", response_model=WatchlistResponse)
 async def create_watchlist_item(
     item: WatchlistCreate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -1012,7 +1011,7 @@ async def create_watchlist_item(
 async def list_watchlist(
     limit: int = Query(50, ge=1, le=100),
     skip: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -1032,7 +1031,7 @@ async def list_watchlist(
 @app.get("/api/watchlist/{item_id}", response_model=WatchlistResponse)
 async def get_watchlist_item(
     item_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -1050,7 +1049,7 @@ async def get_watchlist_item(
 async def update_watchlist_item(
     item_id: int,
     item_update: WatchlistUpdate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -1101,7 +1100,7 @@ async def update_watchlist_item(
 @app.delete("/api/watchlist/{item_id}")
 async def delete_watchlist_item(
     item_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
