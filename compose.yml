@@ -31,7 +31,7 @@ services:
     container_name: investory-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-investory}
+      INVESTORY_API_BASE_URL: ${INVESTORY_API_BASE_URL:-http://backend:8000}
       ALPHA_VANTAGE_KEY: ${ALPHA_VANTAGE_KEY:-demo}
       MASSIVE_API_KEY: ${MASSIVE_API_KEY}
       API_HOST: 0.0.0.0

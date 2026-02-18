@@ -17,13 +17,24 @@ import json
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-from urllib.parse import urljoin
 
-import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy.orm import Session, sessionmaker
 
+from auth import decode_access_token
+from database import SessionLocal
+from main import (
+    calculate_valuation,
+    create_watchlist_item,
+    delete_watchlist_item,
+    evaluate_moat,
+    get_stock_data,
+    list_watchlist,
+    update_watchlist_item,
+)
+from models import User
 from schemas import ValuationInput, WatchlistCreate, WatchlistUpdate
 
 
