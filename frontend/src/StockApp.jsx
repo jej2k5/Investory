@@ -54,6 +54,7 @@ const StockApp = () => {
   const [sortKey, setSortKey] = useState('updated_at');
   const [sortDirection, setSortDirection] = useState('desc');
   const [selectedWatchlistItem, setSelectedWatchlistItem] = useState(null);
+  const [watchlistDetailsLoading, setWatchlistDetailsLoading] = useState(false);
   const [watchlistSaving, setWatchlistSaving] = useState(false);
   const [watchlistMessage, setWatchlistMessage] = useState(null);
   
@@ -218,6 +219,36 @@ const StockApp = () => {
       setWatchlistMessage({ type: 'error', text: err.message });
     } finally {
       setWatchlistSaving(false);
+    }
+  };
+
+  const selectWatchlistItem = async (row) => {
+    setSelectedWatchlistItem(row);
+
+    // If we have a stable numeric ID, fetch the latest version of this item.
+    if (!/^\d+$/.test(String(row.id))) {
+      return;
+    }
+
+    setWatchlistDetailsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/watchlist/${row.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.detail || 'Unable to load watchlist item details');
+      }
+
+      const detailedItem = await response.json();
+      setSelectedWatchlistItem(normalizeWatchlistRow(detailedItem, row.id));
+    } catch (err) {
+      setTableError(err.message);
+    } finally {
+      setWatchlistDetailsLoading(false);
     }
   };
 
@@ -497,103 +528,116 @@ const StockApp = () => {
                             <td colSpan={7} className="px-4 py-12 text-center text-white/50">No stocks yet.</td>
                           </tr>
                         ) : (
-                          sortedStocksTableData.map((row) => (
-                            <tr
-                              key={row.id}
-                              onClick={() => setSelectedWatchlistItem(row)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                  event.preventDefault();
-                                  setSelectedWatchlistItem(row);
-                                }
-                              }}
-                              role="button"
-                              tabIndex={0}
-                              aria-pressed={isSameWatchlistRow(selectedWatchlistItem, row)}
-                              className={`transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 ${
-                                isSameWatchlistRow(selectedWatchlistItem, row) ? 'bg-emerald-500/20' : 'hover:bg-white/10'
-                              }`}
-                            >
-                              <td className="px-4 py-3 text-white font-semibold">{row.symbol}</td>
-                              <td className="px-4 py-3 text-white/80">{row.company_name}</td>
-                              <td className="px-4 py-3 text-emerald-400">{formatCurrency(row.target_buy_price)}</td>
-                              <td className="px-4 py-3 text-blue-300">{formatCurrency(row.target_sell_price)}</td>
-                              <td className="px-4 py-3 text-white/70">
-                                {row.alert_enabled ? (
-                                  <span className="inline-flex items-center gap-1 text-emerald-400"><CheckCircle size={14} />On</span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-white/50"><XCircle size={14} />Off</span>
+                          sortedStocksTableData.map((row) => {
+                            const isSelected = isSameWatchlistRow(selectedWatchlistItem, row);
+
+                            return (
+                              <React.Fragment key={row.id}>
+                                <tr
+                                  onClick={() => selectWatchlistItem(row)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                      event.preventDefault();
+                                      selectWatchlistItem(row);
+                                    }
+                                  }}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-expanded={isSelected}
+                                  className={`transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 ${
+                                    isSelected ? 'bg-emerald-500/20' : 'hover:bg-white/10'
+                                  }`}
+                                >
+                                  <td className="px-4 py-3 text-white font-semibold">{row.symbol}</td>
+                                  <td className="px-4 py-3 text-white/80">{row.company_name}</td>
+                                  <td className="px-4 py-3 text-emerald-400">{formatCurrency(row.target_buy_price)}</td>
+                                  <td className="px-4 py-3 text-blue-300">{formatCurrency(row.target_sell_price)}</td>
+                                  <td className="px-4 py-3 text-white/70">
+                                    {row.alert_enabled ? (
+                                      <span className="inline-flex items-center gap-1 text-emerald-400"><CheckCircle size={14} />On</span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-white/50"><XCircle size={14} />Off</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-white/70">
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-emerald-300 font-medium">{row.moat_score ? `${row.moat_score}/5` : '--'}</span>
+                                      <span className={`${row.has_wide_moat ? 'text-emerald-400' : 'text-white/50'} text-xs`}>
+                                        {row.moat_assessment || (row.has_wide_moat === null ? '--' : row.has_wide_moat ? 'WIDE MOAT' : 'WEAK MOAT')}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-white/60">
+                                    {row.updated_at ? new Date(row.updated_at).toLocaleDateString() : '--'}
+                                  </td>
+                                </tr>
+
+                                {isSelected && (
+                                  <tr className="bg-emerald-500/10">
+                                    <td colSpan={7} className="px-4 py-4">
+                                      <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                                        <div className="flex items-start justify-between mb-4">
+                                          <div>
+                                            <h3 className="text-xl font-semibold text-white">{selectedWatchlistItem.symbol} details</h3>
+                                            <p className="text-white/60 text-sm">{selectedWatchlistItem.company_name}</p>
+                                            {watchlistDetailsLoading && (
+                                              <p className="text-emerald-300/80 text-xs mt-1">Loading full details…</p>
+                                            )}
+                                          </div>
+                                          <button
+                                            onClick={() => setSelectedWatchlistItem(null)}
+                                            className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/70 hover:bg-white/10"
+                                          >
+                                            Clear
+                                          </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">Moat score</p>
+                                            <p className="text-white font-medium">{selectedWatchlistItem.moat_score ?? '--'}</p>
+                                          </div>
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">Moat assessment</p>
+                                            <p className="text-white font-medium">{selectedWatchlistItem.moat_assessment || '--'}</p>
+                                          </div>
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">Wide moat</p>
+                                            <p className="text-white font-medium">{formatMoatText(selectedWatchlistItem.has_wide_moat)}</p>
+                                          </div>
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">ROIC</p>
+                                            <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.roic)}</p>
+                                          </div>
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">Book value growth</p>
+                                            <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.book_value_growth)}</p>
+                                          </div>
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">EPS growth</p>
+                                            <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.eps_growth)}</p>
+                                          </div>
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">Cash flow growth</p>
+                                            <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.cash_flow_growth)}</p>
+                                          </div>
+                                          <div className="p-3 rounded-xl bg-white/5">
+                                            <p className="text-white/50 mb-1">Sales growth</p>
+                                            <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.sales_growth)}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
                                 )}
-                              </td>
-                              <td className="px-4 py-3 text-white/70">
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-emerald-300 font-medium">{row.moat_score ? `${row.moat_score}/5` : '--'}</span>
-                                  <span className={`${row.has_wide_moat ? 'text-emerald-400' : 'text-white/50'} text-xs`}>
-                                    {row.moat_assessment || (row.has_wide_moat === null ? '--' : row.has_wide_moat ? 'WIDE MOAT' : 'WEAK MOAT')}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-white/60">
-                                {row.updated_at ? new Date(row.updated_at).toLocaleDateString() : '--'}
-                              </td>
-                            </tr>
-                          ))
+                              </React.Fragment>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
                   </div>
 
-                  {selectedWatchlistItem && (
-                    <div className="mt-6 p-5 bg-white/5 border border-white/10 rounded-2xl">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-xl font-semibold text-white">{selectedWatchlistItem.symbol} details</h3>
-                          <p className="text-white/60 text-sm">{selectedWatchlistItem.company_name}</p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedWatchlistItem(null)}
-                          className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/70 hover:bg-white/10"
-                        >
-                          Clear
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">Moat score</p>
-                          <p className="text-white font-medium">{selectedWatchlistItem.moat_score ?? '--'}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">Moat assessment</p>
-                          <p className="text-white font-medium">{selectedWatchlistItem.moat_assessment || '--'}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">Wide moat</p>
-                          <p className="text-white font-medium">{formatMoatText(selectedWatchlistItem.has_wide_moat)}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">ROIC</p>
-                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.roic)}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">Book value growth</p>
-                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.book_value_growth)}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">EPS growth</p>
-                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.eps_growth)}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">Cash flow growth</p>
-                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.cash_flow_growth)}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5">
-                          <p className="text-white/50 mb-1">Sales growth</p>
-                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.sales_growth)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </motion.div>
             )}
