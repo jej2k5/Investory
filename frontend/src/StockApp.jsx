@@ -6,6 +6,16 @@ import { useAuth } from './contexts/AuthContext';
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
+const getWatchlistItemId = (item, fallback = '') => {
+  return item?.id
+    ?? item?.watchlist_id
+    ?? item?.item_id
+    ?? item?.symbol
+    ?? item?.stock_symbol
+    ?? item?.ticker
+    ?? fallback;
+};
+
 const StockApp = () => {
   const { token } = useAuth();
   const [symbol, setSymbol] = useState('');
@@ -19,6 +29,7 @@ const StockApp = () => {
   const [tableError, setTableError] = useState(null);
   const [sortKey, setSortKey] = useState('updated_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [selectedWatchlistId, setSelectedWatchlistId] = useState(null);
   const [watchlistSaving, setWatchlistSaving] = useState(false);
   const [watchlistMessage, setWatchlistMessage] = useState(null);
   
@@ -114,6 +125,7 @@ const StockApp = () => {
       const items = Array.isArray(data) ? data : data.items || data.results || [];
 
       const normalizedRows = items.map((item) => ({
+        id: getWatchlistItemId(item, `${item?.company_name || item?.company || 'watchlist-item'}-${item?.updated_at || item?.created_at || ''}`),
         symbol: item.symbol || item.stock_symbol || '--',
         company_name: item.company_name || item.company || '--',
         target_buy_price: item.target_buy_price ?? item.mos_price ?? null,
@@ -122,10 +134,19 @@ const StockApp = () => {
         moat_score: item.moat_score ?? null,
         moat_assessment: item.moat_assessment ?? null,
         has_wide_moat: item.has_wide_moat ?? null,
+        book_value_growth: item.book_value_growth ?? null,
+        eps_growth: item.eps_growth ?? null,
+        cash_flow_growth: item.cash_flow_growth ?? null,
+        sales_growth: item.sales_growth ?? null,
+        roic: item.roic ?? null,
         updated_at: item.updated_at || item.created_at || null,
       }));
 
       setStocksTableData(normalizedRows);
+      setSelectedWatchlistId((currentSelectedId) => {
+        if (!currentSelectedId) return null;
+        return normalizedRows.some((row) => row.id === currentSelectedId) ? currentSelectedId : null;
+      });
     } catch (err) {
       setTableError(err.message);
     } finally {
@@ -178,6 +199,7 @@ const StockApp = () => {
 
       const savedItem = await response.json();
       const normalizedRow = {
+        id: getWatchlistItemId(savedItem, payload.symbol),
         symbol: savedItem.symbol || savedItem.stock_symbol || payload.symbol,
         company_name: savedItem.company_name || savedItem.company || payload.company_name,
         target_buy_price: savedItem.target_buy_price ?? savedItem.mos_price ?? payload.target_buy_price,
@@ -186,13 +208,19 @@ const StockApp = () => {
         moat_score: savedItem.moat_score ?? payload.moat_score,
         moat_assessment: savedItem.moat_assessment ?? payload.moat_assessment,
         has_wide_moat: savedItem.has_wide_moat ?? payload.has_wide_moat,
+        book_value_growth: savedItem.book_value_growth ?? payload.book_value_growth,
+        eps_growth: savedItem.eps_growth ?? payload.eps_growth,
+        cash_flow_growth: savedItem.cash_flow_growth ?? payload.cash_flow_growth,
+        sales_growth: savedItem.sales_growth ?? payload.sales_growth,
+        roic: savedItem.roic ?? payload.roic,
         updated_at: savedItem.updated_at || savedItem.created_at || new Date().toISOString(),
       };
 
       setStocksTableData((prev) => {
-        const remaining = prev.filter((row) => row.symbol !== normalizedRow.symbol);
+        const remaining = prev.filter((row) => row.id !== normalizedRow.id);
         return [normalizedRow, ...remaining];
       });
+      setSelectedWatchlistId(normalizedRow.id);
       setWatchlistMessage({ type: 'success', text: `${payload.symbol} added to watchlist` });
     } catch (err) {
       setWatchlistMessage({ type: 'error', text: err.message });
@@ -235,6 +263,18 @@ const StockApp = () => {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return '--';
     return `$${Number(value).toFixed(2)}`;
   };
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return '--';
+    return `${Number(value).toFixed(1)}%`;
+  };
+
+  const formatMoatText = (hasWideMoat) => {
+    if (hasWideMoat === null || hasWideMoat === undefined) return '--';
+    return hasWideMoat ? 'Wide moat: Yes' : 'Wide moat: No';
+  };
+
+  const selectedWatchlistItem = stocksTableData.find((row) => row.id === selectedWatchlistId) || null;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -468,7 +508,22 @@ const StockApp = () => {
                           </tr>
                         ) : (
                           sortedStocksTableData.map((row) => (
-                            <tr key={`${row.symbol}-${row.updated_at || 'na'}`} className="hover:bg-white/10 transition-colors">
+                            <tr
+                              key={row.id}
+                              onClick={() => setSelectedWatchlistId(row.id)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault();
+                                  setSelectedWatchlistId(row.id);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              aria-pressed={selectedWatchlistId === row.id}
+                              className={`transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 ${
+                                selectedWatchlistId === row.id ? 'bg-emerald-500/20' : 'hover:bg-white/10'
+                              }`}
+                            >
                               <td className="px-4 py-3 text-white font-semibold">{row.symbol}</td>
                               <td className="px-4 py-3 text-white/80">{row.company_name}</td>
                               <td className="px-4 py-3 text-emerald-400">{formatCurrency(row.target_buy_price)}</td>
@@ -497,6 +552,58 @@ const StockApp = () => {
                       </tbody>
                     </table>
                   </div>
+
+                  {selectedWatchlistItem && (
+                    <div className="mt-6 p-5 bg-white/5 border border-white/10 rounded-2xl">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-semibold text-white">{selectedWatchlistItem.symbol} details</h3>
+                          <p className="text-white/60 text-sm">{selectedWatchlistItem.company_name}</p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedWatchlistId(null)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/70 hover:bg-white/10"
+                        >
+                          Clear
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">Moat score</p>
+                          <p className="text-white font-medium">{selectedWatchlistItem.moat_score ?? '--'}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">Moat assessment</p>
+                          <p className="text-white font-medium">{selectedWatchlistItem.moat_assessment || '--'}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">Wide moat</p>
+                          <p className="text-white font-medium">{formatMoatText(selectedWatchlistItem.has_wide_moat)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">ROIC</p>
+                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.roic)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">Book value growth</p>
+                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.book_value_growth)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">EPS growth</p>
+                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.eps_growth)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">Cash flow growth</p>
+                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.cash_flow_growth)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5">
+                          <p className="text-white/50 mb-1">Sales growth</p>
+                          <p className="text-white font-medium">{formatPercent(selectedWatchlistItem.sales_growth)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
